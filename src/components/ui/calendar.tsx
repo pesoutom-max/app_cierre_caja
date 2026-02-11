@@ -10,8 +10,6 @@ import { buttonVariants } from "@/components/ui/button"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
-const WEEKDAYS_ES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
-
 function Calendar({
   className,
   classNames,
@@ -23,16 +21,6 @@ function Calendar({
       showOutsideDays={showOutsideDays}
       weekStartsOn={1}
       locale={es}
-      formatters={{
-        // Fuerza el texto del encabezado (evita "lu ma mi..." pegado o raro)
-        formatWeekdayName: (date) => {
-          // date.getDay(): 0=Dom ... 6=Sáb
-          // Como weekStartsOn=1, queremos mapear a: Lun..Dom
-          const js = date.getDay()
-          const idx = (js + 6) % 7 // Dom->6, Lun->0, Mar->1...
-          return WEEKDAYS_ES[idx]
-        },
-      }}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row gap-4",
@@ -55,7 +43,7 @@ function Calendar({
         tbody: "contents",
 
         // 🔒 Clave: 7 columnas reales
-        head_row: "grid grid-cols-7 w-full",
+        head_row: "hidden",
         head_cell:
           "w-full text-muted-foreground text-center font-normal text-[0.8rem] p-0",
 
