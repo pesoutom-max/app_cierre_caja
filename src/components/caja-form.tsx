@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { InputWithIcon } from "@/components/ui/input-with-icon";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getNum } from "@/lib/utils";
 import { 
   Banknote, 
   PackageMinus, 
@@ -128,13 +128,6 @@ export default function CajaForm() {
     // Set date only on client to avoid hydration mismatch.
     setDate(new Date());
   }, []);
-
-  const getNum = (val: string) => {
-    if (!val) return 0;
-    // For es-CL, "." is a thousands separator.
-    // Remove all dots.
-    return parseInt(String(val).replace(/\./g, ''), 10) || 0;
-  };
 
   const handleInputChange = (field: keyof SalesData, value: string) => {
     const digits = value.replace(/\D/g, "");
@@ -289,6 +282,7 @@ export default function CajaForm() {
                 title: "Reporte Guardado",
                 description: `El reporte del ${format(date || new Date(), "PPP", { locale: es })} ha sido guardado con éxito.`,
             });
+            resetForm();
         })
         .catch((error) => {
             console.error("Error saving document: ", error);
