@@ -152,7 +152,7 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
 
             const totalDeliverySales = Object.values(deliverySalesData).reduce((sum, v) => sum + v, 0);
             
-            const updatedDailyClose = {
+            const updatedDailyClose: any = {
                 date: date,
                 startingCashBalance: getNum(sales.saldoAnterior),
                 totalCashSales: getNum(sales.efectivo),
@@ -163,6 +163,11 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
                 totalDeliverySales,
                 expectedCashBalance: expectedCash,
             };
+
+            if (report.totalCashInBox !== undefined) {
+                updatedDailyClose.cashDifference = report.totalCashInBox - expectedCash;
+            }
+            
             batch.update(reportRef, updatedDailyClose);
 
             const deliverySalesRef = collection(reportRef, 'delivery_service_sales');

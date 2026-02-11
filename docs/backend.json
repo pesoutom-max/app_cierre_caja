@@ -50,6 +50,14 @@
         "notes": {
           "type": "string",
           "description": "Any additional notes regarding the daily close."
+        },
+        "totalCashInBox": {
+          "type": "number",
+          "description": "The actual cash counted in the box at the end of the day."
+        },
+        "cashDifference": {
+          "type": "number",
+          "description": "The difference between expected and actual cash balance (totalCashInBox - expectedCashBalance)."
         }
       },
       "required": [

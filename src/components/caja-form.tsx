@@ -250,6 +250,8 @@ export default function CajaForm() {
         totalDeliverySales: totalDeliverySales,
         cashExpenses: getNum(sales.gastosEfectivo),
         expectedCashBalance: expectedCash,
+        totalCashInBox: totalCashInBox,
+        cashDifference: difference,
     };
 
     const mainCollectionRef = collection(firestore, "daily_closes");
@@ -361,6 +363,13 @@ export default function CajaForm() {
 
   const shareViaWhatsApp = () => {
     const reportData = getReportData();
+    const totalDelivery = 
+      reportData.sales.pedidosYaIceScroll +
+      reportData.sales.pedidosYaWafix +
+      reportData.sales.pedidosYaMix +
+      reportData.sales.uberEats +
+      reportData.sales.junaeb;
+
     const message = `*Resumen de Caja - ${format(reportData.reportDate, "PPP", { locale: es })}*
 
 *Resumen General:*
@@ -369,10 +378,12 @@ export default function CajaForm() {
 - Efectivo Real: ${formatCurrency(reportData.totalCashInBox)}
 - *Diferencia: ${formatCurrency(reportData.difference)}*
 
-*Ingresos:*
+*Desglose de Ingresos:*
 - Efectivo: ${formatCurrency(reportData.sales.efectivo)}
 - Tarjetas: ${formatCurrency(reportData.sales.tarjetas)}
 - Transferencias: ${formatCurrency(reportData.sales.transferencias)}
+- Gift Cards: ${formatCurrency(reportData.sales.giftCards)}
+- Delivery: ${formatCurrency(totalDelivery)}
 
 Saludos.`;
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;

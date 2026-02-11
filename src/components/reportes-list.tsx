@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { AlertCircle, Pencil, Trash } from 'lucide-react';
+import { AlertCircle, Pencil, Share, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -43,6 +43,8 @@ export interface DailyClose {
     cashExpenses: number;
     expectedCashBalance: number;
     notes?: string;
+    totalCashInBox?: number;
+    cashDifference?: number;
 }
 
 const formatDate = (timestamp: { seconds: number; nanoseconds: number; } | Date) => {
@@ -68,6 +70,36 @@ export default function ReportesList() {
   const totalSales = (report: DailyClose) => {
     return report.totalCashSales + report.totalCardSales + report.totalTransferSales + report.totalGiftCardSales + report.totalDeliverySales;
   }
+
+  const handleShare = (report: DailyClose) => {
+    const reportDate = report.date instanceof Date ? report.date : new Date(report.date.seconds * 1000);
+    
+    let message = `*Resumen de Caja - ${format(reportDate, "PPP", { locale: es })}*
+
+*Resumen General:*
+- Venta Total: ${formatCurrency(totalSales(report))}
+- Saldo Esperado: ${formatCurrency(report.expectedCashBalance)}`;
+
+    if (report.totalCashInBox !== undefined && report.cashDifference !== undefined) {
+        message += `
+- Efectivo Real: ${formatCurrency(report.totalCashInBox)}
+- *Diferencia: ${formatCurrency(report.cashDifference)}*`;
+    }
+
+    message += `
+
+*Desglose de Ingresos:*
+- Efectivo: ${formatCurrency(report.totalCashSales)}
+- Tarjetas: ${formatCurrency(report.totalCardSales)}
+- Transferencias: ${formatCurrency(report.totalTransferSales)}
+- Gift Cards: ${formatCurrency(report.totalGiftCardSales)}
+- Delivery: ${formatCurrency(report.totalDeliverySales)}
+
+Saludos.`;
+
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
 
   const handleDeleteConfirm = async () => {
     if (!firestore || !reportToDelete) return;
@@ -179,6 +211,9 @@ export default function ReportesList() {
                   <TableCell className="text-right text-destructive">{formatCurrency(report.cashExpenses)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2 justify-end">
+                      <Button variant="ghost" size="icon" onClick={() => handleShare(report)}>
+                          <Share className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => setReportToEdit(report)}>
                           <Pencil className="h-4 w-4" />
                       </Button>
