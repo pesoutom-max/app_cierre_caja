@@ -1,10 +1,89 @@
+/**
+ * Core Philosophy:
+ * This ruleset is designed for a prototyping environment that uses anonymous Firebase Authentication.
+ * It establishes a permissive security model where any authenticated user, including anonymous ones,
+ * can read and write data. The primary goal is to enable rapid application development and fix
+ * authentication-related errors by ensuring the rules accommodate the anonymous auth provider.
+ * While writes are broadly allowed for signed-in users, critical relational integrity between
+ * parent and child documents is strictly enforced.
+ *
+ * Data Structure:
+ * The data is organized hierarchically. Top-level documents are stored in the `daily_closes`
+ * collection. Each of these documents can have a subcollection named `delivery_service_sales`
+ * which contains related sales data.
+ * - /daily_closes/{dailyCloseId}
+ * - /daily_closes/{dailyCloseId}/delivery_service_sales/{deliveryServiceSaleId}
+ *
+ * Key Security Decisions:
+ * - Open Access for Authenticated Users: In line with the application's use of anonymous
+ *   authentication, any user who has signed in (even anonymously) is granted full read and
+ *   write permissions across the database. This is a deliberate choice for the prototyping phase.
+ * - Relational Integrity: A critical rule ensures that any document created in a subcollection
+ *   (e.g., `delivery_service_sales`) must contain a field (`dailyCloseId`) that correctly
+ *   references its parent document's ID. This field is enforced as immutable on update.
+ * - No Schema Validation: To maximize flexibility during prototyping, these rules do not
+ *   validate the shape or data types of the documents being written, beyond the fields
+ *   required for authorization and relational integrity.
+ */
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write access to authenticated users for daily reports
-    match /dailyReports/{reportId} {
-      allow read, write: if request.auth != null;
+
+    // Helper Functions
+    
+    /**
+     * Checks if the user is authenticated, including anonymous users.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description
+     *   Rules for the `daily_closes` collection. Allows any authenticated user (including
+     *   anonymous users) to create, read, update, and delete daily close records. This
+     *   permissive model is intended for the prototyping stage of the application.
+     * @path
+     *   /daily_closes/{dailyCloseId}
+     * @allow
+     *   An anonymous but authenticated user (create): `db.collection('daily_closes').add({...});`
+     * @deny
+     *   An unauthenticated user (get): `db.collection('daily_closes').doc('some_id').get();`
+     * @principle
+     *   Provides open access for any authenticated session to support rapid prototyping
+     *   with anonymous authentication.
+     */
+    match /daily_closes/{dailyCloseId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+
+      /**
+       * @description
+       *   Rules for the `delivery_service_sales` subcollection. Allows any authenticated
+       *   user to manage sales records, but enforces that each new record is correctly
+       *   linked to its parent `DailyClose` document.
+       * @path
+       *   /daily_closes/{dailyCloseId}/delivery_service_sales/{deliveryServiceSaleId}
+       * @allow
+       *   An authenticated user (create) providing the correct parent ID in the document body:
+       *   `db.collection('daily_closes/d1/delivery_service_sales').add({ dailyCloseId: 'd1', ... });`
+       * @deny
+       *   An authenticated user (create) providing a mismatched parent ID:
+       *   `db.collection('daily_closes/d1/delivery_service_sales').add({ dailyCloseId: 'd2', ... });`
+       * @principle
+       *   Enforces relational integrity by ensuring subcollection documents correctly reference
+       *   their parent document, preventing orphaned data.
+       */
+      match /delivery_service_sales/{deliveryServiceSaleId} {
+        allow get: if isSignedIn();
+        allow list: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.dailyCloseId == dailyCloseId;
+        allow update: if isSignedIn() && resource != null && request.resource.data.dailyCloseId == resource.data.dailyCloseId;
+        allow delete: if isSignedIn() && resource != null;
+      }
     }
   }
 }

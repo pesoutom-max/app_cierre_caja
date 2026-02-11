@@ -1,78 +1,146 @@
 {
   "entities": {
-    "dailyReport": {
-      "title": "Daily Cash Report",
-      "description": "A record of the daily cash closing, including sales, expenses, and cash breakdown.",
+    "DailyClose": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DailyClose",
       "type": "object",
+      "description": "Represents the daily close of cash register, including all sales channels and the expected cash balance.",
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DailyClose entity."
+        },
         "date": {
           "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the report was saved."
+          "description": "The date of the daily close.",
+          "format": "date-time"
         },
-        "reportDate": {
+        "startingCashBalance": {
+          "type": "number",
+          "description": "The starting cash balance for the day."
+        },
+        "totalCashSales": {
+          "type": "number",
+          "description": "The total cash sales for the day."
+        },
+        "totalCardSales": {
+          "type": "number",
+          "description": "The total sales made by card for the day."
+        },
+        "totalTransferSales": {
+          "type": "number",
+          "description": "The total sales made by transfers for the day."
+        },
+        "totalGiftCardSales": {
+          "type": "number",
+          "description": "The total sales made with gift cards for the day."
+        },
+        "totalDeliverySales": {
+          "type": "number",
+          "description": "The total sales made through all delivery services for the day. This is a calculated field."
+        },
+        "cashExpenses": {
+          "type": "number",
+          "description": "Total cash expenses for the day."
+        },
+        "expectedCashBalance": {
+          "type": "number",
+          "description": "The expected cash balance at the end of the day, calculated as (startingCashBalance + totalCashSales - cashExpenses)."
+        },
+        "notes": {
           "type": "string",
-          "format": "date-time",
-          "description": "The actual date of the report, as selected by the user."
-        },
-        "totalSales": {
-          "type": "number",
-          "description": "Total sales for the day."
-        },
-        "expectedCash": {
-          "type": "number",
-          "description": "The expected amount of cash in the box."
-        },
-        "totalCashInBox": {
-          "type": "number",
-          "description": "The actual counted cash in the box."
-        },
-        "difference": {
-          "type": "number",
-          "description": "The difference between expected and actual cash."
-        },
-        "sales": {
-          "type": "object",
-          "description": "Breakdown of sales by payment method and source.",
-          "properties": {
-            "saldoAnterior": { "type": "number" },
-            "gastosEfectivo": { "type": "number" },
-            "efectivo": { "type": "number" },
-            "tarjetas": { "type": "number" },
-            "transferencias": { "type": "number" },
-            "giftCards": { "type": "number" },
-            "pedidosYaIceScroll": { "type": "number" },
-            "pedidosYaWafix": { "type": "number" },
-            "pedidosYaMix": { "type": "number" },
-            "uberEats": { "type": "number" },
-            "junaeb": { "type": "number" }
-          }
-        },
-        "cashBreakdown": {
-          "type": "object",
-          "description": "Breakdown of cash by denomination.",
-          "properties": {
-            "b20000": { "type": "number" },
-            "b10000": { "type": "number" },
-            "b5000": { "type": "number" },
-            "b2000": { "type": "number" },
-            "b1000": { "type": "number" },
-            "m500": { "type": "number" },
-            "m100": { "type": "number" },
-            "m50": { "type": "number" }
-          }
+          "description": "Any additional notes regarding the daily close."
         }
       },
-      "required": ["date", "reportDate", "totalSales"]
+      "required": [
+        "id",
+        "date",
+        "startingCashBalance",
+        "totalCashSales",
+        "totalCardSales",
+        "totalTransferSales",
+        "totalGiftCardSales",
+        "totalDeliverySales",
+        "cashExpenses",
+        "expectedCashBalance"
+      ]
+    },
+    "DeliveryServiceSale": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DeliveryServiceSale",
+      "type": "object",
+      "description": "Represents the sales from different delivery services for a specific daily close.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DeliveryServiceSale entity."
+        },
+        "dailyCloseId": {
+          "type": "string",
+          "description": "Reference to DailyClose. (Relationship: DailyClose 1:N DeliveryServiceSale)"
+        },
+        "serviceName": {
+          "type": "string",
+          "description": "The name of the delivery service (e.g., Pedidos Ya Ice Scroll, Uber Eats, Junaeb)."
+        },
+        "salesAmount": {
+          "type": "number",
+          "description": "The total sales amount from this delivery service for the day."
+        }
+      },
+      "required": [
+        "id",
+        "dailyCloseId",
+        "serviceName",
+        "salesAmount"
+      ]
     }
   },
   "auth": {
-    "providers": ["anonymous"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/dailyReports/{reportId}": {
-      "schema": { "$ref": "#/entities/dailyReport" },
-      "description": "Collection of daily cash closing reports."
-    }
+    "structure": [
+      {
+        "path": "/daily_closes/{dailyCloseId}",
+        "definition": {
+          "entityName": "DailyClose",
+          "schema": {
+            "$ref": "#/backend/entities/DailyClose"
+          },
+          "description": "Stores daily close records. Includes denormalized 'id' for authorization independence.",
+          "params": [
+            {
+              "name": "dailyCloseId",
+              "description": "The unique ID of the daily close document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/daily_closes/{dailyCloseId}/delivery_service_sales/{deliveryServiceSaleId}",
+        "definition": {
+          "entityName": "DeliveryServiceSale",
+          "schema": {
+            "$ref": "#/backend/entities/DeliveryServiceSale"
+          },
+          "description": "Stores sales records for each delivery service.  Requires 'dailyCloseId' to be set and correspond to the parent document ID.",
+          "params": [
+            {
+              "name": "dailyCloseId",
+              "description": "The unique ID of the parent daily close document."
+            },
+            {
+              "name": "deliveryServiceSaleId",
+              "description": "The unique ID of the delivery service sale document."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the Cierre de Caja application. Given the 1:N relationship between DailyClose and DeliveryServiceSale entities, and the requirement to calculate total delivery sales, the structure prioritizes efficient querying and data integrity.\n\nThe core strategy is to store DailyClose documents under a top-level `daily_closes` collection. Each DeliveryServiceSale document is stored as a subcollection under its respective DailyClose document using the path `/daily_closes/{dailyCloseId}/delivery_service_sales/{deliveryServiceSaleId}`.  This direct nesting allows for easy retrieval of all delivery service sales for a given day.\n\nTo achieve Authorization Independence (CRITICAL), all authorization depends on user authentication (`request.auth.uid`). Since all users are anonymous, the database will remain open for read and write. If real user auth were used, the `daily_closes` collection could have a field `ownerId`, corresponding to the user creating the record.\n\nThis structure supports the required QAPs (Rules are not Filters) because listing DailyCloses or DeliveryServiceSales does not depend on data filtering, except by document ID, and authentication is handled separately."
   }
 }
