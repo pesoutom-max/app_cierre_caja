@@ -16,10 +16,15 @@ function Calendar({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
+  // FORZAR configuración correcta ignorando props
+  const finalProps = {
+    ...props,
+    locale: es,
+    weekStartsOn: 1 as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+  };
+  
   return (
     <DayPicker
-      locale={es}
-      weekStartsOn={1}
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
@@ -58,7 +63,7 @@ function Calendar({
         IconLeft: () => <ChevronLeft className="h-4 w-4" />,
         IconRight: () => <ChevronRight className="h-4 w-4" />,
       }}
-      {...props}
+      {...finalProps}
     />
   )
 }
