@@ -39,8 +39,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { useFirestore } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useFirestore, addDocumentNonBlocking } from "@/firebase";
+import { collection, doc } from "firebase/firestore";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -223,7 +223,6 @@ export default function CajaForm() {
     ) as { [K in keyof SalesData]: number };
 
     return {
-      date: serverTimestamp(),
       reportDate: date || new Date(),
       sales: numericSales,
       cashBreakdown,
@@ -234,7 +233,7 @@ export default function CajaForm() {
     };
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!firestore) {
       toast({
         variant: "destructive",
@@ -245,22 +244,73 @@ export default function CajaForm() {
     }
 
     setIsSaving(true);
-    try {
-      const docRef = await addDoc(collection(firestore, "dailyReports"), getReportData());
-      toast({
-        title: "Reporte Guardado",
-        description: `El reporte del ${format(date || new Date(), "PPP", { locale: es })} ha sido guardado con éxito.`,
-      });
-    } catch (error) {
-      console.error("Error adding document: ", error);
-      toast({
-        variant: "destructive",
-        title: "Error al guardar",
-        description: "No se pudo guardar el reporte. Revisa la consola para más detalles.",
-      });
-    } finally {
-      setIsSaving(false);
-    }
+    
+    const getNum = (val: string) => parseFloat(val) || 0;
+    
+    const deliverySalesData: { [key: string]: number } = {
+        "Pedidos Ya Ice Scroll": getNum(sales.pedidosYaIceScroll),
+        "Pedidos Ya Wafix": getNum(sales.pedidosYaWafix),
+        "Pedidos Ya Mix": getNum(sales.pedidosYaMix),
+        "Uber Eats": getNum(sales.uberEats),
+        "Junaeb": getNum(sales.junaeb),
+    };
+
+    const totalDeliverySales = Object.values(deliverySalesData).reduce((sum, v) => sum + v, 0);
+
+    const dailyCloseSchemaData = {
+        date: date || new Date(),
+        startingCashBalance: getNum(sales.saldoAnterior),
+        totalCashSales: getNum(sales.efectivo),
+        totalCardSales: getNum(sales.tarjetas),
+        totalTransferSales: getNum(sales.transferencias),
+        totalGiftCardSales: getNum(sales.giftCards),
+        totalDeliverySales: totalDeliverySales,
+        cashExpenses: getNum(sales.gastosEfectivo),
+        expectedCashBalance: expectedCash,
+    };
+
+    const mainCollectionRef = collection(firestore, "daily_closes");
+    
+    addDocumentNonBlocking(mainCollectionRef, dailyCloseSchemaData)
+        .then(dailyCloseRef => {
+            if (!dailyCloseRef) {
+                throw new Error("Failed to create daily close document.");
+            }
+
+            const deliveryServicePromises = Object.entries(deliverySalesData)
+                .filter(([_, salesAmount]) => salesAmount > 0)
+                .map(([serviceName, salesAmount]) => {
+                    const deliverySaleData = {
+                        dailyCloseId: dailyCloseRef.id,
+                        serviceName: serviceName,
+                        salesAmount: salesAmount,
+                    };
+                    const subCollectionRef = collection(doc(mainCollectionRef, dailyCloseRef.id), 'delivery_service_sales');
+                    return addDocumentNonBlocking(subCollectionRef, deliverySaleData);
+                });
+
+            return Promise.all(deliveryServicePromises);
+        })
+        .then(results => {
+            if (results.some(r => r === undefined)) {
+                 throw new Error("Failed to save some delivery service sales.");
+            }
+            toast({
+                title: "Reporte Guardado",
+                description: `El reporte del ${format(date || new Date(), "PPP", { locale: es })} ha sido guardado con éxito.`,
+            });
+        })
+        .catch((error) => {
+            console.error("Error saving document: ", error);
+            toast({
+                variant: "destructive",
+                title: "Error al guardar",
+                description: error.message || "No se pudo guardar el reporte. Revisa la consola para más detalles.",
+            });
+        })
+        .finally(() => {
+            setIsSaving(false);
+        });
   };
 
   const generatePDF = () => {
