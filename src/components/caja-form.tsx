@@ -45,32 +45,33 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 interface SalesData {
-  saldoAnterior: number;
-  gastosEfectivo: number;
-  efectivo: number;
-  tarjetas: number;
-  transferencias: number;
-  giftCards: number;
-  pedidosYaIceScroll: number;
-  pedidosYaWafix: number;
-  pedidosYaMix: number;
-  uberEats: number;
-  junaeb: number;
+  saldoAnterior: string;
+  gastosEfectivo: string;
+  efectivo: string;
+  tarjetas: string;
+  transferencias: string;
+  giftCards: string;
+  pedidosYaIceScroll: string;
+  pedidosYaWafix: string;
+  pedidosYaMix: string;
+  uberEats: string;
+  junaeb: string;
 }
 
 const initialSalesData: SalesData = {
-  saldoAnterior: 0,
-  gastosEfectivo: 0,
-  efectivo: 0,
-  tarjetas: 0,
-  transferencias: 0,
-  giftCards: 0,
-  pedidosYaIceScroll: 0,
-  pedidosYaWafix: 0,
-  pedidosYaMix: 0,
-  uberEats: 0,
-  junaeb: 0,
+  saldoAnterior: "",
+  gastosEfectivo: "",
+  efectivo: "",
+  tarjetas: "",
+  transferencias: "",
+  giftCards: "",
+  pedidosYaIceScroll: "",
+  pedidosYaWafix: "",
+  pedidosYaMix: "",
+  uberEats: "",
+  junaeb: "",
 };
+
 
 interface CashBreakdown {
   b20000: number;
@@ -128,11 +129,13 @@ export default function CajaForm() {
   }, []);
 
   const handleInputChange = (field: keyof SalesData, value: string) => {
-    const numericValue = parseInt(value, 10);
-    setSales((prev) => ({
-      ...prev,
-      [field]: isNaN(numericValue) ? 0 : numericValue,
-    }));
+    const sanitizedValue = value.replace(",", ".");
+    if (/^\d*\.?\d*$/.test(sanitizedValue)) {
+      setSales((prev) => ({
+        ...prev,
+        [field]: sanitizedValue,
+      }));
+    }
   };
 
   const handleBreakdownChange = (field: keyof CashBreakdown, value: string) => {
@@ -141,6 +144,24 @@ export default function CajaForm() {
       ...prev,
       [field]: isNaN(numericValue) ? 0 : numericValue,
     }));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const form = (e.target as HTMLElement).closest('form');
+      if (!form) return;
+
+      const focusable = Array.from(
+        form.querySelectorAll('input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      ) as HTMLElement[];
+      
+      const index = focusable.indexOf(e.target as HTMLElement);
+
+      if (index > -1 && index < focusable.length - 1) {
+        focusable[index + 1].focus();
+      }
+    }
   };
 
   const resetForm = () => {
@@ -155,6 +176,8 @@ export default function CajaForm() {
 
   React.useEffect(() => {
     setIsCalculating(true);
+
+    const getNum = (val: string) => parseFloat(val) || 0;
     
     const { 
       efectivo, tarjetas, transferencias, giftCards, 
@@ -163,13 +186,13 @@ export default function CajaForm() {
     } = sales;
     
     const total = 
-      efectivo + tarjetas + transferencias + giftCards + 
-      pedidosYaIceScroll + pedidosYaWafix + pedidosYaMix + 
-      uberEats + junaeb;
+      getNum(efectivo) + getNum(tarjetas) + getNum(transferencias) + getNum(giftCards) + 
+      getNum(pedidosYaIceScroll) + getNum(pedidosYaWafix) + getNum(pedidosYaMix) + 
+      getNum(uberEats) + getNum(junaeb);
     setTotalSales(total);
 
     const { saldoAnterior, gastosEfectivo } = sales;
-    const cashBalance = saldoAnterior + efectivo - gastosEfectivo;
+    const cashBalance = getNum(saldoAnterior) + getNum(efectivo) - getNum(gastosEfectivo);
     setExpectedCash(cashBalance);
     
     const timer = setTimeout(() => setIsCalculating(false), 300);
@@ -194,10 +217,15 @@ export default function CajaForm() {
   };
 
   const getReportData = () => {
+    const getNum = (val: string) => parseFloat(val) || 0;
+    const numericSales = Object.fromEntries(
+      Object.entries(sales).map(([key, value]) => [key, getNum(value)])
+    ) as { [K in keyof SalesData]: number };
+
     return {
       date: serverTimestamp(),
       reportDate: date || new Date(),
-      sales,
+      sales: numericSales,
       cashBreakdown,
       totalSales,
       expectedCash,
@@ -318,223 +346,237 @@ Saludos.`;
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-      <Card className="lg:col-span-4">
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle>Resumen del Día</CardTitle>
-              <CardDescription>Totales calculados en base a los datos ingresados.</CardDescription>
-            </div>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant={"outline"} className="w-[280px] justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(d) => setDate(d || new Date())}
-                  initialFocus
-                  locale={es}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6 rounded-lg bg-primary/10 border-2 border-dashed border-primary transition-all duration-300 ${isCalculating ? 'border-accent shadow-lg shadow-accent/20' : 'border-primary'}`}>
-            <div className="flex items-center gap-4">
-              <Sigma className="w-10 h-10 text-accent" />
+    <form onSubmit={(e) => e.preventDefault()}>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+        <Card className="lg:col-span-4">
+          <CardHeader>
+            <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Venta Total del Día</p>
-                <p className="text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(totalSales)}</p>
+                <CardTitle>Resumen del Día</CardTitle>
+                <CardDescription>Totales calculados en base a los datos ingresados.</CardDescription>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant={"outline"} className="w-[280px] justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(d) => setDate(d || new Date())}
+                    initialFocus
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6 rounded-lg bg-primary/10 border-2 border-dashed border-primary transition-all duration-300 ${isCalculating ? 'border-accent shadow-lg shadow-accent/20' : 'border-primary'}`}>
+              <div className="flex items-center gap-4">
+                <Sigma className="w-10 h-10 text-accent" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Venta Total del Día</p>
+                  <p className="text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(totalSales)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <PiggyBank className="w-10 h-10 text-accent" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Saldo Esperado en Caja</p>
+                  <p className="text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(expectedCash)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                  <Coins className="w-10 h-10 text-accent" />
+                  <div>
+                      <p className="text-sm font-medium text-muted-foreground">Efectivo Real en Caja</p>
+                      <p className="text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(totalCashInBox)}</p>
+                  </div>
+              </div>
+              <div className="flex items-center gap-4">
+                  <AlertTriangle className={`w-10 h-10 transition-colors duration-300 ${getDifferenceColor()}`} />
+                  <div>
+                      <p className="text-sm font-medium text-muted-foreground">Diferencia</p>
+                      <p className={`text-3xl font-bold transition-all duration-300 ${getDifferenceColor()}`}>{formatCurrency(difference)}</p>
+                  </div>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <PiggyBank className="w-10 h-10 text-accent" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Saldo Esperado en Caja</p>
-                <p className="text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(expectedCash)}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Caja y Gastos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <InputWithIcon
+              label="Saldo Anterior en Caja"
+              icon={<Banknote className="w-4 h-4" />}
+              value={sales.saldoAnterior}
+              onChange={(e) => handleInputChange("saldoAnterior", e.target.value)}
+              placeholder="0"
+              onKeyDown={handleKeyDown}
+            />
+            <InputWithIcon
+              label="Gastos en Efectivo"
+              icon={<PackageMinus className="w-4 h-4" />}
+              value={sales.gastosEfectivo}
+              onChange={(e) => handleInputChange("gastosEfectivo", e.target.value)}
+              placeholder="0"
+              onKeyDown={handleKeyDown}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Ingresos Principales</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <InputWithIcon
+              label="Efectivo del Día"
+              icon={<Wallet className="w-4 h-4" />}
+              value={sales.efectivo}
+              onChange={(e) => handleInputChange("efectivo", e.target.value)}
+              placeholder="0"
+              onKeyDown={handleKeyDown}
+            />
+            <InputWithIcon
+              label="Monto en Tarjetas"
+              icon={<CreditCard className="w-4 h-4" />}
+              value={sales.tarjetas}
+              onChange={(e) => handleInputChange("tarjetas", e.target.value)}
+              placeholder="0"
+              onKeyDown={handleKeyDown}
+            />
+            <InputWithIcon
+              label="Transferencias Recibidas"
+              icon={<ArrowRightLeft className="w-4 h-4" />}
+              value={sales.transferencias}
+              onChange={(e) => handleInputChange("transferencias", e.target.value)}
+              placeholder="0"
+              onKeyDown={handleKeyDown}
+            />
+            <InputWithIcon
+              label="Gift Cards Entregados"
+              icon={<Gift className="w-4 h-4" />}
+              value={sales.giftCards}
+              onChange={(e) => handleInputChange("giftCards", e.target.value)}
+              placeholder="0"
+              onKeyDown={handleKeyDown}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Ingresos por Delivery</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <InputWithIcon
+              label="Pedidos Ya Ice Scroll"
+              icon={<Bike className="w-4 h-4" />}
+              value={sales.pedidosYaIceScroll}
+              onChange={(e) => handleInputChange("pedidosYaIceScroll", e.target.value)}
+              placeholder="0"
+              onKeyDown={handleKeyDown}
+            />
+            <InputWithIcon
+              label="Pedidos Ya Wafix"
+              icon={<Bike className="w-4 h-4" />}
+              value={sales.pedidosYaWafix}
+              onChange={(e) => handleInputChange("pedidosYaWafix", e.target.value)}
+              placeholder="0"
+              onKeyDown={handleKeyDown}
+            />
+            <InputWithIcon
+              label="Pedidos Ya Mix"
+              icon={<Bike className="w-4 h-4" />}
+              value={sales.pedidosYaMix}
+              onChange={(e) => handleInputChange("pedidosYaMix", e.target.value)}
+              placeholder="0"
+              onKeyDown={handleKeyDown}
+            />
+            <InputWithIcon
+              label="Uber Eats"
+              icon={<Bike className="w-4 h-4" />}
+              value={sales.uberEats}
+              onChange={(e) => handleInputChange("uberEats", e.target.value)}
+              placeholder="0"
+              onKeyDown={handleKeyDown}
+            />
+            <InputWithIcon
+              label="Junaeb"
+              icon={<School2 className="w-4 h-4" />}
+              value={sales.junaeb}
+              onChange={(e) => handleInputChange("junaeb", e.target.value)}
+              placeholder="0"
+              onKeyDown={handleKeyDown}
+            />
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Detalle de Efectivo en Caja</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+              {denominations.map((d) => (
+              <div key={d.key} className="flex items-center justify-between gap-2">
+                  <Label htmlFor={d.key} className="text-sm font-normal flex-1">{d.label}</Label>
+                  <div className="flex items-center gap-2">
+                      <Input
+                      id={d.key}
+                      type="number"
+                      value={cashBreakdown[d.key] || ''}
+                      onChange={(e) => handleBreakdownChange(d.key, e.target.value)}
+                      placeholder="0"
+                      className="w-20 h-9 text-right"
+                      min="0"
+                      step="1"
+                      onKeyDown={handleKeyDown}
+                      />
+                      <span className="w-24 text-right font-mono text-sm text-muted-foreground">
+                          {formatCurrency(cashBreakdown[d.key] * d.value)}
+                      </span>
+                  </div>
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-                <Coins className="w-10 h-10 text-accent" />
-                <div>
-                    <p className="text-sm font-medium text-muted-foreground">Efectivo Real en Caja</p>
-                    <p className="text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(totalCashInBox)}</p>
-                </div>
-            </div>
-            <div className="flex items-center gap-4">
-                <AlertTriangle className={`w-10 h-10 transition-colors duration-300 ${getDifferenceColor()}`} />
-                <div>
-                    <p className="text-sm font-medium text-muted-foreground">Diferencia</p>
-                    <p className={`text-3xl font-bold transition-all duration-300 ${getDifferenceColor()}`}>{formatCurrency(difference)}</p>
-                </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+              <Separator className="my-4" />
+              <div className="flex items-center justify-between font-bold text-lg">
+                  <span>Total Contado</span>
+                  <span>{formatCurrency(totalCashInBox)}</span>
+              </div>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Caja y Gastos</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <InputWithIcon
-            label="Saldo Anterior en Caja"
-            icon={<Banknote className="w-4 h-4" />}
-            value={sales.saldoAnterior || ''}
-            onChange={(e) => handleInputChange("saldoAnterior", e.target.value)}
-            placeholder="0"
-          />
-          <InputWithIcon
-            label="Gastos en Efectivo"
-            icon={<PackageMinus className="w-4 h-4" />}
-            value={sales.gastosEfectivo || ''}
-            onChange={(e) => handleInputChange("gastosEfectivo", e.target.value)}
-            placeholder="0"
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Ingresos Principales</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <InputWithIcon
-            label="Efectivo del Día"
-            icon={<Wallet className="w-4 h-4" />}
-            value={sales.efectivo || ''}
-            onChange={(e) => handleInputChange("efectivo", e.target.value)}
-            placeholder="0"
-          />
-          <InputWithIcon
-            label="Monto en Tarjetas"
-            icon={<CreditCard className="w-4 h-4" />}
-            value={sales.tarjetas || ''}
-            onChange={(e) => handleInputChange("tarjetas", e.target.value)}
-            placeholder="0"
-          />
-          <InputWithIcon
-            label="Transferencias Recibidas"
-            icon={<ArrowRightLeft className="w-4 h-4" />}
-            value={sales.transferencias || ''}
-            onChange={(e) => handleInputChange("transferencias", e.target.value)}
-            placeholder="0"
-          />
-          <InputWithIcon
-            label="Gift Cards Entregados"
-            icon={<Gift className="w-4 h-4" />}
-            value={sales.giftCards || ''}
-            onChange={(e) => handleInputChange("giftCards", e.target.value)}
-            placeholder="0"
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Ingresos por Delivery</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <InputWithIcon
-            label="Pedidos Ya Ice Scroll"
-            icon={<Bike className="w-4 h-4" />}
-            value={sales.pedidosYaIceScroll || ''}
-            onChange={(e) => handleInputChange("pedidosYaIceScroll", e.target.value)}
-            placeholder="0"
-          />
-          <InputWithIcon
-            label="Pedidos Ya Wafix"
-            icon={<Bike className="w-4 h-4" />}
-            value={sales.pedidosYaWafix || ''}
-            onChange={(e) => handleInputChange("pedidosYaWafix", e.target.value)}
-            placeholder="0"
-          />
-          <InputWithIcon
-            label="Pedidos Ya Mix"
-            icon={<Bike className="w-4 h-4" />}
-            value={sales.pedidosYaMix || ''}
-            onChange={(e) => handleInputChange("pedidosYaMix", e.target.value)}
-            placeholder="0"
-          />
-          <InputWithIcon
-            label="Uber Eats"
-            icon={<Bike className="w-4 h-4" />}
-            value={sales.uberEats || ''}
-            onChange={(e) => handleInputChange("uberEats", e.target.value)}
-            placeholder="0"
-          />
-          <InputWithIcon
-            label="Junaeb"
-            icon={<School2 className="w-4 h-4" />}
-            value={sales.junaeb || ''}
-            onChange={(e) => handleInputChange("junaeb", e.target.value)}
-            placeholder="0"
-          />
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Detalle de Efectivo en Caja</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-            {denominations.map((d) => (
-            <div key={d.key} className="flex items-center justify-between gap-2">
-                <Label htmlFor={d.key} className="text-sm font-normal flex-1">{d.label}</Label>
-                <div className="flex items-center gap-2">
-                    <Input
-                    id={d.key}
-                    type="number"
-                    value={cashBreakdown[d.key] || ''}
-                    onChange={(e) => handleBreakdownChange(d.key, e.target.value)}
-                    placeholder="0"
-                    className="w-20 h-9 text-right"
-                    min="0"
-                    step="1"
-                    />
-                    <span className="w-24 text-right font-mono text-sm text-muted-foreground">
-                        {formatCurrency(cashBreakdown[d.key] * d.value)}
-                    </span>
-                </div>
-            </div>
-            ))}
-            <Separator className="my-4" />
-            <div className="flex items-center justify-between font-bold text-lg">
-                <span>Total Contado</span>
-                <span>{formatCurrency(totalCashInBox)}</span>
-            </div>
-        </CardContent>
-      </Card>
-
-      <div className="lg:col-span-4 flex justify-end gap-2">
-        <Button variant="outline" onClick={resetForm}>
-          <RotateCcw className="mr-2 h-4 w-4" />
-          Reiniciar
-        </Button>
-        <Button variant="secondary" onClick={shareViaWhatsApp}>
-          <Share className="mr-2 h-4 w-4" />
-          Compartir
-        </Button>
-        <Button variant="secondary" onClick={generatePDF}>
-          <Download className="mr-2 h-4 w-4" />
-          PDF
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          Guardar
-        </Button>
+        <div className="lg:col-span-4 flex justify-end gap-2">
+          <Button variant="outline" onClick={resetForm}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reiniciar
+          </Button>
+          <Button variant="secondary" onClick={shareViaWhatsApp}>
+            <Share className="mr-2 h-4 w-4" />
+            Compartir
+          </Button>
+          <Button variant="secondary" onClick={generatePDF}>
+            <Download className="mr-2 h-4 w-4" />
+            PDF
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Guardar
+          </Button>
+        </div>
       </div>
-    </div>
+    </form>
   );
 }

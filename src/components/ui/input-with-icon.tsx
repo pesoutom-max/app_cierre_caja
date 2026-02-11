@@ -25,11 +25,10 @@ const InputWithIcon = React.forwardRef<HTMLInputElement, InputWithIconProps>(
           </span>
           <Input
             id={inputId}
-            type="number"
+            type="text"
+            inputMode="decimal"
             className={cn("pl-7", className)}
             ref={ref}
-            min="0"
-            step="1"
             {...props}
           />
         </div>
