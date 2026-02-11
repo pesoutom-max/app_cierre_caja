@@ -59,17 +59,17 @@ interface SalesData {
 }
 
 const initialSalesData: SalesData = {
-  saldoAnterior: "",
-  gastosEfectivo: "",
-  efectivo: "",
-  tarjetas: "",
-  transferencias: "",
-  giftCards: "",
-  pedidosYaIceScroll: "",
-  pedidosYaWafix: "",
-  pedidosYaMix: "",
-  uberEats: "",
-  junaeb: "",
+  saldoAnterior: "0,00",
+  gastosEfectivo: "0,00",
+  efectivo: "0,00",
+  tarjetas: "0,00",
+  transferencias: "0,00",
+  giftCards: "0,00",
+  pedidosYaIceScroll: "0,00",
+  pedidosYaWafix: "0,00",
+  pedidosYaMix: "0,00",
+  uberEats: "0,00",
+  junaeb: "0,00",
 };
 
 
@@ -128,14 +128,20 @@ export default function CajaForm() {
     setDate(new Date());
   }, []);
 
+  const getNum = (val: string) => {
+    if (!val) return 0;
+    // For es-CL, "." can be a thousands separator and "," is the decimal.
+    // Remove all dots, and replace the comma with a dot for parseFloat.
+    return parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 0;
+  };
+
   const handleInputChange = (field: keyof SalesData, value: string) => {
-    const sanitizedValue = value.replace(",", ".");
-    if (/^\d*\.?\d*$/.test(sanitizedValue)) {
-      setSales((prev) => ({
-        ...prev,
-        [field]: sanitizedValue,
-      }));
+    // This validation allows typing numbers in Spanish/es-CL locale format,
+    // e.g., "1.234,56". It allows digits, dots, and one comma.
+    if (!/^[0-9.,]*$/.test(value) || (value.match(/,/g) || []).length > 1) {
+      return;
     }
+    setSales((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleBreakdownChange = (field: keyof CashBreakdown, value: string) => {
@@ -146,21 +152,21 @@ export default function CajaForm() {
     }));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const form = (e.target as HTMLElement).closest('form');
-      if (!form) return;
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const activeElement = document.activeElement as HTMLElement;
 
-      const focusable = Array.from(
-        form.querySelectorAll('input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])')
-      ) as HTMLElement[];
-      
-      const index = focusable.indexOf(e.target as HTMLElement);
+    if (!activeElement || !form.contains(activeElement)) return;
 
-      if (index > -1 && index < focusable.length - 1) {
-        focusable[index + 1].focus();
-      }
+    const focusable = Array.from(
+      form.querySelectorAll('input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])')
+    ) as HTMLElement[];
+    
+    const index = focusable.indexOf(activeElement);
+
+    if (index > -1 && index < focusable.length - 1) {
+      focusable[index + 1].focus();
     }
   };
 
@@ -176,8 +182,6 @@ export default function CajaForm() {
 
   React.useEffect(() => {
     setIsCalculating(true);
-
-    const getNum = (val: string) => parseFloat(val) || 0;
     
     const { 
       efectivo, tarjetas, transferencias, giftCards, 
@@ -217,7 +221,6 @@ export default function CajaForm() {
   };
 
   const getReportData = () => {
-    const getNum = (val: string) => parseFloat(val) || 0;
     const numericSales = Object.fromEntries(
       Object.entries(sales).map(([key, value]) => [key, getNum(value)])
     ) as { [K in keyof SalesData]: number };
@@ -244,8 +247,6 @@ export default function CajaForm() {
     }
 
     setIsSaving(true);
-    
-    const getNum = (val: string) => parseFloat(val) || 0;
     
     const deliverySalesData: { [key: string]: number } = {
         "Pedidos Ya Ice Scroll": getNum(sales.pedidosYaIceScroll),
@@ -396,7 +397,7 @@ Saludos.`;
   };
 
   return (
-    <form onSubmit={(e) => e.preventDefault()}>
+    <form onSubmit={handleFormSubmit}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
         <Card className="lg:col-span-4">
           <CardHeader>
@@ -469,7 +470,6 @@ Saludos.`;
               value={sales.saldoAnterior}
               onChange={(e) => handleInputChange("saldoAnterior", e.target.value)}
               placeholder="0,00"
-              onKeyDown={handleKeyDown}
             />
             <InputWithIcon
               label="Gastos en Efectivo"
@@ -477,7 +477,6 @@ Saludos.`;
               value={sales.gastosEfectivo}
               onChange={(e) => handleInputChange("gastosEfectivo", e.target.value)}
               placeholder="0,00"
-              onKeyDown={handleKeyDown}
             />
           </CardContent>
         </Card>
@@ -493,7 +492,6 @@ Saludos.`;
               value={sales.efectivo}
               onChange={(e) => handleInputChange("efectivo", e.target.value)}
               placeholder="0,00"
-              onKeyDown={handleKeyDown}
             />
             <InputWithIcon
               label="Monto en Tarjetas"
@@ -501,7 +499,6 @@ Saludos.`;
               value={sales.tarjetas}
               onChange={(e) => handleInputChange("tarjetas", e.target.value)}
               placeholder="0,00"
-              onKeyDown={handleKeyDown}
             />
             <InputWithIcon
               label="Transferencias Recibidas"
@@ -509,7 +506,6 @@ Saludos.`;
               value={sales.transferencias}
               onChange={(e) => handleInputChange("transferencias", e.target.value)}
               placeholder="0,00"
-              onKeyDown={handleKeyDown}
             />
             <InputWithIcon
               label="Gift Cards Entregados"
@@ -517,7 +513,6 @@ Saludos.`;
               value={sales.giftCards}
               onChange={(e) => handleInputChange("giftCards", e.target.value)}
               placeholder="0,00"
-              onKeyDown={handleKeyDown}
             />
           </CardContent>
         </Card>
@@ -533,7 +528,6 @@ Saludos.`;
               value={sales.pedidosYaIceScroll}
               onChange={(e) => handleInputChange("pedidosYaIceScroll", e.target.value)}
               placeholder="0,00"
-              onKeyDown={handleKeyDown}
             />
             <InputWithIcon
               label="Pedidos Ya Wafix"
@@ -541,7 +535,6 @@ Saludos.`;
               value={sales.pedidosYaWafix}
               onChange={(e) => handleInputChange("pedidosYaWafix", e.target.value)}
               placeholder="0,00"
-              onKeyDown={handleKeyDown}
             />
             <InputWithIcon
               label="Pedidos Ya Mix"
@@ -549,7 +542,6 @@ Saludos.`;
               value={sales.pedidosYaMix}
               onChange={(e) => handleInputChange("pedidosYaMix", e.target.value)}
               placeholder="0,00"
-              onKeyDown={handleKeyDown}
             />
             <InputWithIcon
               label="Uber Eats"
@@ -557,7 +549,6 @@ Saludos.`;
               value={sales.uberEats}
               onChange={(e) => handleInputChange("uberEats", e.target.value)}
               placeholder="0,00"
-              onKeyDown={handleKeyDown}
             />
             <InputWithIcon
               label="Junaeb"
@@ -565,7 +556,6 @@ Saludos.`;
               value={sales.junaeb}
               onChange={(e) => handleInputChange("junaeb", e.target.value)}
               placeholder="0,00"
-              onKeyDown={handleKeyDown}
             />
           </CardContent>
         </Card>
@@ -588,7 +578,6 @@ Saludos.`;
                       className="w-20 h-9 text-right"
                       min="0"
                       step="1"
-                      onKeyDown={handleKeyDown}
                       />
                       <span className="w-24 text-right font-mono text-sm text-muted-foreground">
                           {formatCurrency((cashBreakdown[d.key] || 0) * d.value)}
