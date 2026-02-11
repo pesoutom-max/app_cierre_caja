@@ -25,8 +25,7 @@ const InputWithIcon = React.forwardRef<HTMLInputElement, InputWithIconProps>(
           </span>
           <Input
             id={inputId}
-            type="text"
-            inputMode="decimal"
+            type="tel"
             className={cn("pl-7", className)}
             ref={ref}
             {...props}

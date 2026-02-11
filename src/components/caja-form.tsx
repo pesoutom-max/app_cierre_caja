@@ -136,12 +136,21 @@ export default function CajaForm() {
   };
 
   const handleInputChange = (field: keyof SalesData, value: string) => {
-    // This validation allows typing numbers in Spanish/es-CL locale format,
-    // e.g., "1.234,56". It allows digits, dots, and one comma.
-    if (!/^[0-9.,]*$/.test(value) || (value.match(/,/g) || []).length > 1) {
+    const digits = value.replace(/\D/g, "");
+    
+    if (!digits) {
+      setSales((prev) => ({ ...prev, [field]: "0,00" }));
       return;
     }
-    setSales((prev) => ({ ...prev, [field]: value }));
+    
+    const numberValue = parseInt(digits, 10) / 100;
+    
+    const formattedValue = new Intl.NumberFormat('es-CL', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(numberValue);
+
+    setSales((prev) => ({ ...prev, [field]: formattedValue }));
   };
 
   const handleBreakdownChange = (field: keyof CashBreakdown, value: string) => {
@@ -152,23 +161,24 @@ export default function CajaForm() {
     }));
   };
 
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const activeElement = document.activeElement as HTMLElement;
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const form = e.currentTarget.closest('form');
+      if (!form) return;
 
-    if (!activeElement || !form.contains(activeElement)) return;
+      const focusable = Array.from(
+        form.querySelectorAll('input:not([disabled]), button:not([disabled])')
+      ) as HTMLElement[];
+      
+      const index = focusable.indexOf(e.currentTarget as HTMLElement);
 
-    const focusable = Array.from(
-      form.querySelectorAll('input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])')
-    ) as HTMLElement[];
-    
-    const index = focusable.indexOf(activeElement);
-
-    if (index > -1 && index < focusable.length - 1) {
-      focusable[index + 1].focus();
+      if (index > -1 && index < focusable.length - 1) {
+        focusable[index + 1].focus();
+      }
     }
   };
+
 
   const resetForm = () => {
     setSales(initialSalesData);
@@ -397,7 +407,7 @@ Saludos.`;
   };
 
   return (
-    <form onSubmit={handleFormSubmit}>
+    <form>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
         <Card className="lg:col-span-4">
           <CardHeader>
@@ -469,6 +479,7 @@ Saludos.`;
               icon={<Banknote className="w-4 h-4" />}
               value={sales.saldoAnterior}
               onChange={(e) => handleInputChange("saldoAnterior", e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0,00"
             />
             <InputWithIcon
@@ -476,6 +487,7 @@ Saludos.`;
               icon={<PackageMinus className="w-4 h-4" />}
               value={sales.gastosEfectivo}
               onChange={(e) => handleInputChange("gastosEfectivo", e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0,00"
             />
           </CardContent>
@@ -491,6 +503,7 @@ Saludos.`;
               icon={<Wallet className="w-4 h-4" />}
               value={sales.efectivo}
               onChange={(e) => handleInputChange("efectivo", e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0,00"
             />
             <InputWithIcon
@@ -498,6 +511,7 @@ Saludos.`;
               icon={<CreditCard className="w-4 h-4" />}
               value={sales.tarjetas}
               onChange={(e) => handleInputChange("tarjetas", e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0,00"
             />
             <InputWithIcon
@@ -505,6 +519,7 @@ Saludos.`;
               icon={<ArrowRightLeft className="w-4 h-4" />}
               value={sales.transferencias}
               onChange={(e) => handleInputChange("transferencias", e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0,00"
             />
             <InputWithIcon
@@ -512,6 +527,7 @@ Saludos.`;
               icon={<Gift className="w-4 h-4" />}
               value={sales.giftCards}
               onChange={(e) => handleInputChange("giftCards", e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0,00"
             />
           </CardContent>
@@ -527,6 +543,7 @@ Saludos.`;
               icon={<Bike className="w-4 h-4" />}
               value={sales.pedidosYaIceScroll}
               onChange={(e) => handleInputChange("pedidosYaIceScroll", e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0,00"
             />
             <InputWithIcon
@@ -534,6 +551,7 @@ Saludos.`;
               icon={<Bike className="w-4 h-4" />}
               value={sales.pedidosYaWafix}
               onChange={(e) => handleInputChange("pedidosYaWafix", e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0,00"
             />
             <InputWithIcon
@@ -541,6 +559,7 @@ Saludos.`;
               icon={<Bike className="w-4 h-4" />}
               value={sales.pedidosYaMix}
               onChange={(e) => handleInputChange("pedidosYaMix", e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0,00"
             />
             <InputWithIcon
@@ -548,6 +567,7 @@ Saludos.`;
               icon={<Bike className="w-4 h-4" />}
               value={sales.uberEats}
               onChange={(e) => handleInputChange("uberEats", e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0,00"
             />
             <InputWithIcon
@@ -555,6 +575,7 @@ Saludos.`;
               icon={<School2 className="w-4 h-4" />}
               value={sales.junaeb}
               onChange={(e) => handleInputChange("junaeb", e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="0,00"
             />
           </CardContent>
@@ -574,6 +595,7 @@ Saludos.`;
                       type="number"
                       value={cashBreakdown[d.key] || ''}
                       onChange={(e) => handleBreakdownChange(d.key, e.target.value)}
+                      onKeyDown={handleKeyDown}
                       placeholder="0"
                       className="w-20 h-9 text-right"
                       min="0"
