@@ -25,10 +25,24 @@ import {
   RotateCcw,
   Coins,
   AlertTriangle,
+  Calendar as CalendarIcon,
+  Share,
+  Download,
+  Save,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
+import { useFirestore } from "@/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface SalesData {
   saldoAnterior: number;
@@ -93,6 +107,7 @@ const denominations = [
 
 
 export default function CajaForm() {
+  const [date, setDate] = React.useState<Date>(new Date());
   const [sales, setSales] = React.useState<SalesData>(initialSalesData);
   const [cashBreakdown, setCashBreakdown] = React.useState<CashBreakdown>(initialCashBreakdown);
   
@@ -102,6 +117,10 @@ export default function CajaForm() {
   const [difference, setDifference] = React.useState(0);
 
   const [isCalculating, setIsCalculating] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const { toast } = useToast();
+  const firestore = useFirestore();
 
   const handleInputChange = (field: keyof SalesData, value: string) => {
     const numericValue = parseInt(value, 10);
@@ -122,6 +141,11 @@ export default function CajaForm() {
   const resetForm = () => {
     setSales(initialSalesData);
     setCashBreakdown(initialCashBreakdown);
+    setDate(new Date());
+    toast({
+      title: "Formulario reiniciado",
+      description: "Todos los campos han sido limpiados.",
+    });
   }
 
   React.useEffect(() => {
@@ -148,16 +172,9 @@ export default function CajaForm() {
   }, [sales]);
 
   React.useEffect(() => {
-    const { b20000, b10000, b5000, b2000, b1000, m500, m100, m50 } = cashBreakdown;
-    const total =
-      (b20000 || 0) * 20000 +
-      (b10000 || 0) * 10000 +
-      (b5000 || 0) * 5000 +
-      (b2000 || 0) * 2000 +
-      (b1000 || 0) * 1000 +
-      (m500 || 0) * 500 +
-      (m100 || 0) * 100 +
-      (m50 || 0) * 50;
+    const total = denominations.reduce((acc, d) => {
+        return acc + (cashBreakdown[d.key] || 0) * d.value;
+    }, 0);
     setTotalCashInBox(total);
   }, [cashBreakdown]);
 
@@ -171,12 +188,157 @@ export default function CajaForm() {
     return 'text-muted-foreground';
   };
 
+  const getReportData = () => {
+    return {
+      date: serverTimestamp(),
+      reportDate: date,
+      sales,
+      cashBreakdown,
+      totalSales,
+      expectedCash,
+      totalCashInBox,
+      difference,
+    };
+  };
+
+  const handleSave = async () => {
+    if (!firestore) {
+      toast({
+        variant: "destructive",
+        title: "Error de conexión",
+        description: "No se pudo conectar a Firebase. Inténtalo de nuevo.",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const docRef = await addDoc(collection(firestore, "dailyReports"), getReportData());
+      toast({
+        title: "Reporte Guardado",
+        description: `El reporte del ${format(date, "PPP", { locale: es })} ha sido guardado con éxito.`,
+      });
+    } catch (error) {
+      console.error("Error adding document: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error al guardar",
+        description: "No se pudo guardar el reporte. Revisa la consola para más detalles.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    const reportData = getReportData();
+    
+    doc.setFontSize(20);
+    doc.text("Reporte de Cierre de Caja", 105, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`Fecha: ${format(reportData.reportDate, "PPP", { locale: es })}`, 105, 28, { align: 'center' });
+
+    autoTable(doc, {
+      startY: 40,
+      head: [['Resumen', 'Monto']],
+      body: [
+        ['Venta Total del Día', formatCurrency(reportData.totalSales)],
+        ['Saldo Esperado en Caja', formatCurrency(reportData.expectedCash)],
+        ['Efectivo Real en Caja', formatCurrency(reportData.totalCashInBox)],
+        ['Diferencia', { content: formatCurrency(reportData.difference), styles: { textColor: reportData.difference < 0 ? [255, 0, 0] : [0, 0, 0] } }],
+      ],
+      theme: 'grid',
+    });
+
+    const lastTableY = (doc as any).lastAutoTable.finalY;
+    
+    autoTable(doc, {
+      startY: lastTableY + 10,
+      head: [['Concepto de Ingreso', 'Monto']],
+      body: [
+        ['Efectivo del Día', formatCurrency(reportData.sales.efectivo)],
+        ['Monto en Tarjetas', formatCurrency(reportData.sales.tarjetas)],
+        ['Transferencias Recibidas', formatCurrency(reportData.sales.transferencias)],
+        ['Gift Cards Entregados', formatCurrency(reportData.sales.giftCards)],
+        ['Pedidos Ya Ice Scroll', formatCurrency(reportData.sales.pedidosYaIceScroll)],
+        ['Pedidos Ya Wafix', formatCurrency(reportData.sales.pedidosYaWafix)],
+        ['Pedidos Ya Mix', formatCurrency(reportData.sales.pedidosYaMix)],
+        ['Uber Eats', formatCurrency(reportData.sales.uberEats)],
+        ['Junaeb', formatCurrency(reportData.sales.junaeb)],
+        ['Saldo Anterior en Caja', formatCurrency(reportData.sales.saldoAnterior)],
+        ['Gastos en Efectivo', formatCurrency(reportData.sales.gastosEfectivo)],
+      ],
+      theme: 'striped',
+    });
+
+    const secondTableY = (doc as any).lastAutoTable.finalY;
+
+    autoTable(doc, {
+      startY: secondTableY + 10,
+      head: [['Denominación', 'Cantidad', 'Total']],
+      body: denominations.map(d => [
+        d.label,
+        reportData.cashBreakdown[d.key] || '0',
+        formatCurrency((reportData.cashBreakdown[d.key] || 0) * d.value)
+      ]),
+      didDrawPage: (data) => {
+        data.settings.margin.top = 10;
+      },
+      theme: 'grid',
+    });
+
+
+    doc.save(`Reporte_Caja_${format(reportData.reportDate, "yyyy-MM-dd")}.pdf`);
+  };
+
+  const shareViaWhatsApp = () => {
+    const reportData = getReportData();
+    const message = `*Resumen de Caja - ${format(reportData.reportDate, "PPP", { locale: es })}*
+
+*Resumen General:*
+- Venta Total: ${formatCurrency(reportData.totalSales)}
+- Saldo Esperado: ${formatCurrency(reportData.expectedCash)}
+- Efectivo Real: ${formatCurrency(reportData.totalCashInBox)}
+- *Diferencia: ${formatCurrency(reportData.difference)}*
+
+*Ingresos:*
+- Efectivo: ${formatCurrency(reportData.sales.efectivo)}
+- Tarjetas: ${formatCurrency(reportData.sales.tarjetas)}
+- Transferencias: ${formatCurrency(reportData.sales.transferencias)}
+
+Saludos.`;
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
       <Card className="lg:col-span-4">
         <CardHeader>
-          <CardTitle>Resumen del Día</CardTitle>
-          <CardDescription>Totales calculados en base a los datos ingresados.</CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle>Resumen del Día</CardTitle>
+              <CardDescription>Totales calculados en base a los datos ingresados.</CardDescription>
+            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={"outline"} className="w-[280px] justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(d) => setDate(d || new Date())}
+                  initialFocus
+                  locale={es}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </CardHeader>
         <CardContent>
           <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6 rounded-lg bg-primary/10 border-2 border-dashed border-primary transition-all duration-300 ${isCalculating ? 'border-accent shadow-lg shadow-accent/20' : 'border-primary'}`}>
@@ -346,10 +508,26 @@ export default function CajaForm() {
         </CardContent>
       </Card>
 
-      <div className="lg:col-span-4 flex justify-end">
+      <div className="lg:col-span-4 flex justify-end gap-2">
         <Button variant="outline" onClick={resetForm}>
           <RotateCcw className="mr-2 h-4 w-4" />
           Reiniciar
+        </Button>
+        <Button variant="secondary" onClick={shareViaWhatsApp}>
+          <Share className="mr-2 h-4 w-4" />
+          Compartir
+        </Button>
+        <Button variant="secondary" onClick={generatePDF}>
+          <Download className="mr-2 h-4 w-4" />
+          PDF
+        </Button>
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          Guardar
         </Button>
       </div>
     </div>

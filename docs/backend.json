@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "dailyReport": {
+      "title": "Daily Cash Report",
+      "description": "A record of the daily cash closing, including sales, expenses, and cash breakdown.",
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the report was saved."
+        },
+        "reportDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The actual date of the report, as selected by the user."
+        },
+        "totalSales": {
+          "type": "number",
+          "description": "Total sales for the day."
+        },
+        "expectedCash": {
+          "type": "number",
+          "description": "The expected amount of cash in the box."
+        },
+        "totalCashInBox": {
+          "type": "number",
+          "description": "The actual counted cash in the box."
+        },
+        "difference": {
+          "type": "number",
+          "description": "The difference between expected and actual cash."
+        },
+        "sales": {
+          "type": "object",
+          "description": "Breakdown of sales by payment method and source.",
+          "properties": {
+            "saldoAnterior": { "type": "number" },
+            "gastosEfectivo": { "type": "number" },
+            "efectivo": { "type": "number" },
+            "tarjetas": { "type": "number" },
+            "transferencias": { "type": "number" },
+            "giftCards": { "type": "number" },
+            "pedidosYaIceScroll": { "type": "number" },
+            "pedidosYaWafix": { "type": "number" },
+            "pedidosYaMix": { "type": "number" },
+            "uberEats": { "type": "number" },
+            "junaeb": { "type": "number" }
+          }
+        },
+        "cashBreakdown": {
+          "type": "object",
+          "description": "Breakdown of cash by denomination.",
+          "properties": {
+            "b20000": { "type": "number" },
+            "b10000": { "type": "number" },
+            "b5000": { "type": "number" },
+            "b2000": { "type": "number" },
+            "b1000": { "type": "number" },
+            "m500": { "type": "number" },
+            "m100": { "type": "number" },
+            "m50": { "type": "number" }
+          }
+        }
+      },
+      "required": ["date", "reportDate", "totalSales"]
+    }
+  },
+  "auth": {
+    "providers": ["anonymous"]
+  },
+  "firestore": {
+    "/dailyReports/{reportId}": {
+      "schema": { "$ref": "#/entities/dailyReport" },
+      "description": "Collection of daily cash closing reports."
+    }
+  }
+}
