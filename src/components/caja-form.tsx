@@ -395,14 +395,14 @@ Saludos.`;
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
         <Card className="lg:col-span-4">
           <CardHeader>
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
               <div>
                 <CardTitle>Resumen del Día</CardTitle>
                 <CardDescription>Totales calculados en base a los datos ingresados.</CardDescription>
               </div>
               <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant={"outline"} className="w-[280px] justify-start text-left font-normal">
+                  <Button variant={"outline"} className="w-full md:w-[280px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {date ? format(date, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
                   </Button>
@@ -428,28 +428,28 @@ Saludos.`;
                 <Sigma className="w-10 h-10 text-accent" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Venta Total del Día</p>
-                  <p className="text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(totalSales)}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(totalSales)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <PiggyBank className="w-10 h-10 text-accent" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Saldo Esperado en Caja</p>
-                  <p className="text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(expectedCash)}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(expectedCash)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                   <Coins className="w-10 h-10 text-accent" />
                   <div>
                       <p className="text-sm font-medium text-muted-foreground">Efectivo Real en Caja</p>
-                      <p className="text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(totalCashInBox)}</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(totalCashInBox)}</p>
                   </div>
               </div>
               <div className="flex items-center gap-4">
                   <AlertTriangle className={`w-10 h-10 transition-colors duration-300 ${getDifferenceColor()}`} />
                   <div>
                       <p className="text-sm font-medium text-muted-foreground">Diferencia</p>
-                      <p className={`text-3xl font-bold transition-all duration-300 ${getDifferenceColor()}`}>{formatCurrency(difference)}</p>
+                      <p className={`text-2xl sm:text-3xl font-bold transition-all duration-300 ${getDifferenceColor()}`}>{formatCurrency(difference)}</p>
                   </div>
               </div>
             </div>
@@ -583,11 +583,11 @@ Saludos.`;
                       value={cashBreakdown[d.key] || ''}
                       onChange={(e) => handleBreakdownChange(d.key, e.target.value)}
                       placeholder="0"
-                      className="w-20 h-9 text-right"
+                      className="w-16 h-9 text-right"
                       min="0"
                       step="1"
                       />
-                      <span className="w-24 text-right font-mono text-sm text-muted-foreground">
+                      <span className="w-20 text-right font-mono text-sm text-muted-foreground">
                           {formatCurrency((cashBreakdown[d.key] || 0) * d.value)}
                       </span>
                   </div>
@@ -601,7 +601,7 @@ Saludos.`;
           </CardContent>
         </Card>
 
-        <div className="lg:col-span-4 flex justify-end gap-2">
+        <div className="lg:col-span-4 flex flex-col sm:flex-row justify-end gap-2">
           <Button type="button" variant="outline" onClick={resetForm}>
             <RotateCcw className="mr-2 h-4 w-4" />
             Reiniciar

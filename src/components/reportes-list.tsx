@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, getDocs, writeBatch } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/utils';
@@ -53,6 +53,10 @@ const formatDate = (timestamp: { seconds: number; nanoseconds: number; } | Date)
   return format(date, "PPP", { locale: es });
 };
 
+const totalSales = (report: DailyClose) => {
+  return report.totalCashSales + report.totalCardSales + report.totalTransferSales + report.totalGiftCardSales + report.totalDeliverySales;
+}
+
 export default function ReportesList() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -66,10 +70,6 @@ export default function ReportesList() {
   );
 
   const { data: reports, isLoading, error } = useCollection<DailyClose>(dailyClosesQuery);
-
-  const totalSales = (report: DailyClose) => {
-    return report.totalCashSales + report.totalCardSales + report.totalTransferSales + report.totalGiftCardSales + report.totalDeliverySales;
-  }
 
   const handleShare = (report: DailyClose) => {
     const reportDate = report.date instanceof Date ? report.date : new Date(report.date.seconds * 1000);
@@ -142,9 +142,9 @@ Saludos.`;
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Skeleton className="h-10 w-full rounded-md" />
-            <Skeleton className="h-10 w-full rounded-md" />
-            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-24 w-full rounded-md" />
+            <Skeleton className="h-24 w-full rounded-md" />
+            <Skeleton className="h-24 w-full rounded-md" />
           </div>
         </CardContent>
       </Card>
@@ -186,7 +186,8 @@ Saludos.`;
 
   return (
     <>
-      <Card>
+      {/* Desktop View */}
+      <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Historial de Reportes</CardTitle>
           <CardDescription>Revisa los cierres de caja de días anteriores.</CardDescription>
@@ -229,12 +230,50 @@ Saludos.`;
         </CardContent>
       </Card>
 
+      {/* Mobile View */}
+      <div className="md:hidden space-y-4">
+        {reports.map(report => (
+          <Card key={report.id}>
+            <CardHeader>
+              <CardTitle>{formatDate(report.date)}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <p className="text-muted-foreground">Venta Total</p>
+              <p className="text-right font-medium">{formatCurrency(totalSales(report))}</p>
+
+              <p className="text-muted-foreground">Saldo Esperado</p>
+              <p className="text-right font-medium">{formatCurrency(report.expectedCashBalance)}</p>
+
+              <p className="text-muted-foreground">Gastos</p>
+              <p className="text-right font-medium text-destructive">{formatCurrency(report.cashExpenses)}</p>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => handleShare(report)}>
+                    <Share className="h-4 w-4 mr-2" />
+                    Compartir
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setReportToEdit(report)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Editar
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setReportToDelete(report)}>
+                    <Trash className="h-4 w-4 mr-2" />
+                    Eliminar
+                </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+
+
       <Dialog open={!!reportToEdit} onOpenChange={(isOpen) => !isOpen && setReportToEdit(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-4xl h-full sm:h-auto">
             <DialogHeader>
                 <DialogTitle>Editar Reporte del {reportToEdit ? formatDate(new Date(reportToEdit.date.seconds * 1000)): ''}</DialogTitle>
             </DialogHeader>
-            {reportToEdit && <EditReportForm report={reportToEdit} onFinished={() => setReportToEdit(null)} />}
+            <div className="overflow-y-auto">
+              {reportToEdit && <EditReportForm report={reportToEdit} onFinished={() => setReportToEdit(null)} />}
+            </div>
         </DialogContent>
       </Dialog>
 

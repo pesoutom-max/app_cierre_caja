@@ -232,10 +232,10 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
                     </CardContent>
                 </Card>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col-reverse gap-4 sm:flex-row sm:justify-between sm:items-center">
                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant={"outline"} className="w-[280px] justify-start text-left font-normal">
+                  <Button variant={"outline"} className="w-full sm:w-[280px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {date ? format(date, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
                   </Button>
