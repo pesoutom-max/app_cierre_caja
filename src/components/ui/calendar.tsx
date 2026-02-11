@@ -16,6 +16,7 @@ function Calendar({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
+  console.log('Calendar props:', { locale: es, weekStartsOn: 1 });
   // FORZAR configuración correcta ignorando props
   const finalProps = {
     ...props,
