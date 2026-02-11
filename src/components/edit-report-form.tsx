@@ -248,7 +248,7 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={date} onSelect={(d) => { setDate(d || new Date()); setIsCalendarOpen(false); }} initialFocus locale={es} weekStartsOn={1} />
+                  <Calendar mode="single" selected={date} onSelect={(d) => { setDate(d || new Date()); setIsCalendarOpen(false); }} initialFocus />
                 </PopoverContent>
               </Popover>
               <div className="flex gap-2">
