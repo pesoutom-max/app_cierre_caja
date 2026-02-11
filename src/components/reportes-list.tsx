@@ -45,6 +45,8 @@ export interface DailyClose {
     notes?: string;
     totalCashInBox?: number;
     cashDifference?: number;
+    cashWithdrawal?: number;
+    nextDayBalance?: number;
 }
 
 const formatDate = (timestamp: { seconds: number; nanoseconds: number; } | Date) => {
@@ -85,6 +87,12 @@ export default function ReportesList() {
 - Efectivo Real: ${formatCurrency(report.totalCashInBox)}
 - *Diferencia: ${formatCurrency(report.cashDifference)}*`;
     }
+    if (report.cashWithdrawal !== undefined && report.nextDayBalance !== undefined) {
+        message += `
+- Retiro: ${formatCurrency(report.cashWithdrawal)}
+- *Saldo para Mañana: ${formatCurrency(report.nextDayBalance)}*`;
+    }
+
 
     message += `
 
@@ -199,6 +207,7 @@ Saludos.`;
                 <TableHead>Fecha</TableHead>
                 <TableHead className="text-right">Venta Total</TableHead>
                 <TableHead className="text-right">Saldo Esperado</TableHead>
+                <TableHead className="text-right">Saldo Siguiente</TableHead>
                 <TableHead className="text-right">Gastos</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -209,6 +218,7 @@ Saludos.`;
                   <TableCell className="font-medium">{formatDate(report.date)}</TableCell>
                   <TableCell className="text-right">{formatCurrency(totalSales(report))}</TableCell>
                   <TableCell className="text-right">{formatCurrency(report.expectedCashBalance)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(report.nextDayBalance || 0)}</TableCell>
                   <TableCell className="text-right text-destructive">{formatCurrency(report.cashExpenses)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2 justify-end">
@@ -243,6 +253,9 @@ Saludos.`;
 
               <p className="text-muted-foreground">Saldo Esperado</p>
               <p className="text-right font-medium">{formatCurrency(report.expectedCashBalance)}</p>
+
+              <p className="text-muted-foreground">Saldo Siguiente</p>
+              <p className="text-right font-medium">{formatCurrency(report.nextDayBalance || 0)}</p>
 
               <p className="text-muted-foreground">Gastos</p>
               <p className="text-right font-medium text-destructive">{formatCurrency(report.cashExpenses)}</p>

@@ -28,6 +28,7 @@ import {
   Calendar as CalendarIcon,
   Save,
   Loader2,
+  ArrowDownCircle,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -49,6 +50,7 @@ interface SalesData {
   pedidosYaMix: string;
   uberEats: string;
   junaeb: string;
+  cashWithdrawal: string;
 }
 
 const initialSalesData: SalesData = {
@@ -63,6 +65,7 @@ const initialSalesData: SalesData = {
   pedidosYaMix: "",
   uberEats: "",
   junaeb: "",
+  cashWithdrawal: "",
 };
 
 export function EditReportForm({ report, onFinished }: EditReportFormProps) {
@@ -102,6 +105,7 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
             transferencias: String(report.totalTransferSales),
             giftCards: String(report.totalGiftCardSales),
             gastosEfectivo: String(report.cashExpenses),
+            cashWithdrawal: String(report.cashWithdrawal || 0),
             pedidosYaIceScroll: '0',
             pedidosYaWafix: '0',
             pedidosYaMix: '0',
@@ -162,6 +166,8 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
                 cashExpenses: getNum(sales.gastosEfectivo),
                 totalDeliverySales,
                 expectedCashBalance: expectedCash,
+                cashWithdrawal: getNum(sales.cashWithdrawal),
+                nextDayBalance: (report.totalCashInBox || 0) - getNum(sales.cashWithdrawal),
             };
 
             if (report.totalCashInBox !== undefined) {
@@ -210,6 +216,7 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
                     <CardContent className="space-y-4">
                         <InputWithIcon label="Saldo Anterior" icon={<Banknote className="w-4 h-4" />} value={sales.saldoAnterior} onChange={(e) => handleInputChange("saldoAnterior", e.target.value)} placeholder="0" inputMode="numeric" />
                         <InputWithIcon label="Gastos en Efectivo" icon={<PackageMinus className="w-4 h-4" />} value={sales.gastosEfectivo} onChange={(e) => handleInputChange("gastosEfectivo", e.target.value)} placeholder="0" inputMode="numeric" />
+                        <InputWithIcon label="Retiro de Efectivo" icon={<ArrowDownCircle className="w-4 h-4 text-destructive" />} value={sales.cashWithdrawal} onChange={(e) => handleInputChange("cashWithdrawal", e.target.value)} placeholder="0" inputMode="numeric" />
                     </CardContent>
                 </Card>
                 <Card>

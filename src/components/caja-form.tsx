@@ -30,6 +30,8 @@ import {
   Download,
   Save,
   Loader2,
+  Landmark,
+  ArrowDownCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,11 +114,14 @@ export default function CajaForm() {
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
   const [sales, setSales] = React.useState<SalesData>(initialSalesData);
   const [cashBreakdown, setCashBreakdown] = React.useState<CashBreakdown>(initialCashBreakdown);
+  const [cashWithdrawal, setCashWithdrawal] = React.useState("");
   
   const [totalSales, setTotalSales] = React.useState(0);
   const [expectedCash, setExpectedCash] = React.useState(0);
   const [totalCashInBox, setTotalCashInBox] = React.useState(0);
   const [difference, setDifference] = React.useState(0);
+  const [nextDayBalance, setNextDayBalance] = React.useState(0);
+
 
   const [isCalculating, setIsCalculating] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -143,6 +148,17 @@ export default function CajaForm() {
     setSales((prev) => ({ ...prev, [field]: formattedValue }));
   };
 
+  const handleCashWithdrawalChange = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    if (!digits) {
+      setCashWithdrawal("");
+      return;
+    }
+    const numberValue = parseInt(digits, 10);
+    const formattedValue = new Intl.NumberFormat('es-CL').format(numberValue);
+    setCashWithdrawal(formattedValue);
+  };
+
 
   const handleBreakdownChange = (field: keyof CashBreakdown, value: string) => {
     const numericValue = parseInt(value, 10);
@@ -155,6 +171,7 @@ export default function CajaForm() {
   const resetForm = () => {
     setSales(initialSalesData);
     setCashBreakdown(initialCashBreakdown);
+    setCashWithdrawal("");
     setDate(new Date());
     toast({
       title: "Formulario reiniciado",
@@ -196,6 +213,10 @@ export default function CajaForm() {
     setDifference(totalCashInBox - expectedCash);
   }, [totalCashInBox, expectedCash]);
 
+  React.useEffect(() => {
+    setNextDayBalance(totalCashInBox - getNum(cashWithdrawal));
+  }, [totalCashInBox, cashWithdrawal]);
+
   const getDifferenceColor = () => {
     if (difference < 0) return 'text-destructive';
     if (difference > 0) return 'text-primary';
@@ -215,6 +236,8 @@ export default function CajaForm() {
       expectedCash,
       totalCashInBox,
       difference,
+      cashWithdrawal: getNum(cashWithdrawal),
+      nextDayBalance,
     };
   };
 
@@ -252,6 +275,8 @@ export default function CajaForm() {
         expectedCashBalance: expectedCash,
         totalCashInBox: totalCashInBox,
         cashDifference: difference,
+        cashWithdrawal: getNum(cashWithdrawal),
+        nextDayBalance: nextDayBalance,
     };
 
     const mainCollectionRef = collection(firestore, "daily_closes");
@@ -316,6 +341,8 @@ export default function CajaForm() {
         ['Saldo Esperado en Caja', formatCurrency(reportData.expectedCash)],
         ['Efectivo Real en Caja', formatCurrency(reportData.totalCashInBox)],
         ['Diferencia', { content: formatCurrency(reportData.difference), styles: { textColor: reportData.difference < 0 ? [255, 0, 0] : [0, 0, 0] } }],
+        ['Retiro de Efectivo', formatCurrency(reportData.cashWithdrawal)],
+        ['Saldo Día Siguiente', formatCurrency(reportData.nextDayBalance)],
       ],
       theme: 'grid',
     });
@@ -377,6 +404,8 @@ export default function CajaForm() {
 - Saldo Esperado: ${formatCurrency(reportData.expectedCash)}
 - Efectivo Real: ${formatCurrency(reportData.totalCashInBox)}
 - *Diferencia: ${formatCurrency(reportData.difference)}*
+- Retiro: ${formatCurrency(reportData.cashWithdrawal)}
+- *Saldo para Mañana: ${formatCurrency(reportData.nextDayBalance)}*
 
 *Desglose de Ingresos:*
 - Efectivo: ${formatCurrency(reportData.sales.efectivo)}
@@ -423,7 +452,7 @@ Saludos.`;
             </div>
           </CardHeader>
           <CardContent>
-            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6 rounded-lg bg-primary/10 border-2 border-dashed border-primary transition-all duration-300 ${isCalculating ? 'border-accent shadow-lg shadow-accent/20' : 'border-primary'}`}>
+            <div className={`grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 p-6 rounded-lg bg-primary/10 border-2 border-dashed border-primary transition-all duration-300 ${isCalculating ? 'border-accent shadow-lg shadow-accent/20' : 'border-primary'}`}>
               <div className="flex items-center gap-4">
                 <Sigma className="w-10 h-10 text-accent" />
                 <div>
@@ -432,7 +461,7 @@ Saludos.`;
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <PiggyBank className="w-10 h-10 text-accent" />
+                <Landmark className="w-10 h-10 text-accent" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Saldo Esperado en Caja</p>
                   <p className="text-2xl sm:text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(expectedCash)}</p>
@@ -451,6 +480,13 @@ Saludos.`;
                       <p className="text-sm font-medium text-muted-foreground">Diferencia</p>
                       <p className={`text-2xl sm:text-3xl font-bold transition-all duration-300 ${getDifferenceColor()}`}>{formatCurrency(difference)}</p>
                   </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <PiggyBank className="w-10 h-10 text-accent" />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Saldo Día Siguiente</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-accent transition-all duration-300">{formatCurrency(nextDayBalance)}</p>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -598,6 +634,15 @@ Saludos.`;
                   <span>Total Contado</span>
                   <span>{formatCurrency(totalCashInBox)}</span>
               </div>
+              <InputWithIcon
+                label="Retiro de Efectivo"
+                icon={<ArrowDownCircle className="w-4 h-4 text-destructive" />}
+                value={cashWithdrawal}
+                onChange={(e) => handleCashWithdrawalChange(e.target.value)}
+                placeholder="0"
+                inputMode="numeric"
+                containerClassName="pt-4"
+              />
           </CardContent>
         </Card>
 

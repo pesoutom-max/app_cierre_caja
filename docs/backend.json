@@ -58,6 +58,14 @@
         "cashDifference": {
           "type": "number",
           "description": "The difference between expected and actual cash balance (totalCashInBox - expectedCashBalance)."
+        },
+        "cashWithdrawal": {
+          "type": "number",
+          "description": "The amount of cash withdrawn at the end of the day."
+        },
+        "nextDayBalance": {
+          "type": "number",
+          "description": "The remaining cash balance for the next day, calculated as (totalCashInBox - cashWithdrawal)."
         }
       },
       "required": [
