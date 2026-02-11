@@ -55,7 +55,7 @@ function Calendar({
         tbody: "contents",
 
         // 🔒 Clave: 7 columnas reales
-        head_row: "hidden",
+        head_row: "grid grid-cols-7 w-full",
         head_cell:
           "w-full text-muted-foreground text-center font-normal text-[0.8rem] p-0",
 
