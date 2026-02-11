@@ -35,10 +35,9 @@ const formatDate = (timestamp: { seconds: number; nanoseconds: number; }) => {
 
 export default function ReportesList() {
   const firestore = useFirestore();
-  const dailyClosesRef = collection(firestore, 'daily_closes');
   const dailyClosesQuery = useMemoFirebase(
-    () => (firestore ? query(dailyClosesRef, orderBy('date', 'desc')) : null),
-    [firestore, dailyClosesRef]
+    () => (firestore ? query(collection(firestore, 'daily_closes'), orderBy('date', 'desc')) : null),
+    [firestore]
   );
 
   const { data: reports, isLoading, error } = useCollection<DailyClose>(dailyClosesQuery);
