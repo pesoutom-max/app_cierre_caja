@@ -107,7 +107,7 @@ const denominations = [
 
 
 export default function CajaForm() {
-  const [date, setDate] = React.useState<Date>(new Date());
+  const [date, setDate] = React.useState<Date>();
   const [sales, setSales] = React.useState<SalesData>(initialSalesData);
   const [cashBreakdown, setCashBreakdown] = React.useState<CashBreakdown>(initialCashBreakdown);
   
@@ -121,6 +121,11 @@ export default function CajaForm() {
 
   const { toast } = useToast();
   const firestore = useFirestore();
+
+  React.useEffect(() => {
+    // Set date only on client to avoid hydration mismatch.
+    setDate(new Date());
+  }, []);
 
   const handleInputChange = (field: keyof SalesData, value: string) => {
     const numericValue = parseInt(value, 10);
@@ -191,7 +196,7 @@ export default function CajaForm() {
   const getReportData = () => {
     return {
       date: serverTimestamp(),
-      reportDate: date,
+      reportDate: date || new Date(),
       sales,
       cashBreakdown,
       totalSales,
@@ -216,7 +221,7 @@ export default function CajaForm() {
       const docRef = await addDoc(collection(firestore, "dailyReports"), getReportData());
       toast({
         title: "Reporte Guardado",
-        description: `El reporte del ${format(date, "PPP", { locale: es })} ha sido guardado con éxito.`,
+        description: `El reporte del ${format(date || new Date(), "PPP", { locale: es })} ha sido guardado con éxito.`,
       });
     } catch (error) {
       console.error("Error adding document: ", error);
