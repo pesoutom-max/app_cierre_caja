@@ -1,3 +1,5 @@
+'use client';
+
 import CajaForm from "@/components/caja-form";
 import ReportesList from "@/components/reportes-list";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
