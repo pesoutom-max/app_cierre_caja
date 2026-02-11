@@ -109,6 +109,7 @@ const denominations = [
 
 export default function CajaForm() {
   const [date, setDate] = React.useState<Date>();
+  const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
   const [sales, setSales] = React.useState<SalesData>(initialSalesData);
   const [cashBreakdown, setCashBreakdown] = React.useState<CashBreakdown>(initialCashBreakdown);
   
@@ -130,13 +131,12 @@ export default function CajaForm() {
 
   const getNum = (val: string) => {
     if (!val) return 0;
-    // For es-CL, "." can be a thousands separator and "," is the decimal.
-    // Remove all dots, and replace the comma with a dot for parseFloat.
-    return parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 0;
+    // For es-CL, "." is a thousands separator.
+    // Remove all dots.
+    return parseInt(String(val).replace(/\./g, ''), 10) || 0;
   };
 
   const handleInputChange = (field: keyof SalesData, value: string) => {
-    // Remove non-digit characters to keep only numbers
     const digits = value.replace(/\D/g, "");
     
     if (!digits) {
@@ -145,12 +145,11 @@ export default function CajaForm() {
     }
     
     const numberValue = parseInt(digits, 10);
-    
-    // Format the number with thousand separators for es-CL locale
     const formattedValue = new Intl.NumberFormat('es-CL').format(numberValue);
 
     setSales((prev) => ({ ...prev, [field]: formattedValue }));
   };
+
 
   const handleBreakdownChange = (field: keyof CashBreakdown, value: string) => {
     const numericValue = parseInt(value, 10);
@@ -387,7 +386,7 @@ Saludos.`;
   };
 
   return (
-    <form>
+    <form onSubmit={(e) => e.preventDefault()}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
         <Card className="lg:col-span-4">
           <CardHeader>
@@ -396,7 +395,7 @@ Saludos.`;
                 <CardTitle>Resumen del Día</CardTitle>
                 <CardDescription>Totales calculados en base a los datos ingresados.</CardDescription>
               </div>
-              <Popover>
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button variant={"outline"} className="w-[280px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -407,7 +406,10 @@ Saludos.`;
                   <Calendar
                     mode="single"
                     selected={date}
-                    onSelect={(d) => setDate(d || new Date())}
+                    onSelect={(d) => {
+                      setDate(d || new Date());
+                      setIsCalendarOpen(false);
+                    }}
                     initialFocus
                     locale={es}
                   />
@@ -460,6 +462,7 @@ Saludos.`;
               value={sales.saldoAnterior}
               onChange={(e) => handleInputChange("saldoAnterior", e.target.value)}
               placeholder="0"
+              inputMode="numeric"
             />
             <InputWithIcon
               label="Gastos en Efectivo"
@@ -467,6 +470,7 @@ Saludos.`;
               value={sales.gastosEfectivo}
               onChange={(e) => handleInputChange("gastosEfectivo", e.target.value)}
               placeholder="0"
+              inputMode="numeric"
             />
           </CardContent>
         </Card>
@@ -482,6 +486,7 @@ Saludos.`;
               value={sales.efectivo}
               onChange={(e) => handleInputChange("efectivo", e.target.value)}
               placeholder="0"
+              inputMode="numeric"
             />
             <InputWithIcon
               label="Monto en Tarjetas"
@@ -489,6 +494,7 @@ Saludos.`;
               value={sales.tarjetas}
               onChange={(e) => handleInputChange("tarjetas", e.target.value)}
               placeholder="0"
+              inputMode="numeric"
             />
             <InputWithIcon
               label="Transferencias Recibidas"
@@ -496,6 +502,7 @@ Saludos.`;
               value={sales.transferencias}
               onChange={(e) => handleInputChange("transferencias", e.target.value)}
               placeholder="0"
+              inputMode="numeric"
             />
             <InputWithIcon
               label="Gift Cards Entregados"
@@ -503,6 +510,7 @@ Saludos.`;
               value={sales.giftCards}
               onChange={(e) => handleInputChange("giftCards", e.target.value)}
               placeholder="0"
+              inputMode="numeric"
             />
           </CardContent>
         </Card>
@@ -518,6 +526,7 @@ Saludos.`;
               value={sales.pedidosYaIceScroll}
               onChange={(e) => handleInputChange("pedidosYaIceScroll", e.target.value)}
               placeholder="0"
+              inputMode="numeric"
             />
             <InputWithIcon
               label="Pedidos Ya Wafix"
@@ -525,6 +534,7 @@ Saludos.`;
               value={sales.pedidosYaWafix}
               onChange={(e) => handleInputChange("pedidosYaWafix", e.target.value)}
               placeholder="0"
+              inputMode="numeric"
             />
             <InputWithIcon
               label="Pedidos Ya Mix"
@@ -532,6 +542,7 @@ Saludos.`;
               value={sales.pedidosYaMix}
               onChange={(e) => handleInputChange("pedidosYaMix", e.target.value)}
               placeholder="0"
+              inputMode="numeric"
             />
             <InputWithIcon
               label="Uber Eats"
@@ -539,6 +550,7 @@ Saludos.`;
               value={sales.uberEats}
               onChange={(e) => handleInputChange("uberEats", e.target.value)}
               placeholder="0"
+              inputMode="numeric"
             />
             <InputWithIcon
               label="Junaeb"
@@ -546,6 +558,7 @@ Saludos.`;
               value={sales.junaeb}
               onChange={(e) => handleInputChange("junaeb", e.target.value)}
               placeholder="0"
+              inputMode="numeric"
             />
           </CardContent>
         </Card>
@@ -584,19 +597,19 @@ Saludos.`;
         </Card>
 
         <div className="lg:col-span-4 flex justify-end gap-2">
-          <Button variant="outline" onClick={resetForm}>
+          <Button type="button" variant="outline" onClick={resetForm}>
             <RotateCcw className="mr-2 h-4 w-4" />
             Reiniciar
           </Button>
-          <Button variant="secondary" onClick={shareViaWhatsApp}>
+          <Button type="button" variant="secondary" onClick={shareViaWhatsApp}>
             <Share className="mr-2 h-4 w-4" />
             Compartir
           </Button>
-          <Button variant="secondary" onClick={generatePDF}>
+          <Button type="button" variant="secondary" onClick={generatePDF}>
             <Download className="mr-2 h-4 w-4" />
             PDF
           </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button type="button" onClick={handleSave} disabled={isSaving}>
             {isSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
