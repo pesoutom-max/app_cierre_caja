@@ -468,7 +468,7 @@ Saludos.`;
               icon={<Banknote className="w-4 h-4" />}
               value={sales.saldoAnterior}
               onChange={(e) => handleInputChange("saldoAnterior", e.target.value)}
-              placeholder="0"
+              placeholder="0,00"
               onKeyDown={handleKeyDown}
             />
             <InputWithIcon
@@ -476,7 +476,7 @@ Saludos.`;
               icon={<PackageMinus className="w-4 h-4" />}
               value={sales.gastosEfectivo}
               onChange={(e) => handleInputChange("gastosEfectivo", e.target.value)}
-              placeholder="0"
+              placeholder="0,00"
               onKeyDown={handleKeyDown}
             />
           </CardContent>
@@ -492,7 +492,7 @@ Saludos.`;
               icon={<Wallet className="w-4 h-4" />}
               value={sales.efectivo}
               onChange={(e) => handleInputChange("efectivo", e.target.value)}
-              placeholder="0"
+              placeholder="0,00"
               onKeyDown={handleKeyDown}
             />
             <InputWithIcon
@@ -500,7 +500,7 @@ Saludos.`;
               icon={<CreditCard className="w-4 h-4" />}
               value={sales.tarjetas}
               onChange={(e) => handleInputChange("tarjetas", e.target.value)}
-              placeholder="0"
+              placeholder="0,00"
               onKeyDown={handleKeyDown}
             />
             <InputWithIcon
@@ -508,7 +508,7 @@ Saludos.`;
               icon={<ArrowRightLeft className="w-4 h-4" />}
               value={sales.transferencias}
               onChange={(e) => handleInputChange("transferencias", e.target.value)}
-              placeholder="0"
+              placeholder="0,00"
               onKeyDown={handleKeyDown}
             />
             <InputWithIcon
@@ -516,7 +516,7 @@ Saludos.`;
               icon={<Gift className="w-4 h-4" />}
               value={sales.giftCards}
               onChange={(e) => handleInputChange("giftCards", e.target.value)}
-              placeholder="0"
+              placeholder="0,00"
               onKeyDown={handleKeyDown}
             />
           </CardContent>
@@ -532,7 +532,7 @@ Saludos.`;
               icon={<Bike className="w-4 h-4" />}
               value={sales.pedidosYaIceScroll}
               onChange={(e) => handleInputChange("pedidosYaIceScroll", e.target.value)}
-              placeholder="0"
+              placeholder="0,00"
               onKeyDown={handleKeyDown}
             />
             <InputWithIcon
@@ -540,7 +540,7 @@ Saludos.`;
               icon={<Bike className="w-4 h-4" />}
               value={sales.pedidosYaWafix}
               onChange={(e) => handleInputChange("pedidosYaWafix", e.target.value)}
-              placeholder="0"
+              placeholder="0,00"
               onKeyDown={handleKeyDown}
             />
             <InputWithIcon
@@ -548,7 +548,7 @@ Saludos.`;
               icon={<Bike className="w-4 h-4" />}
               value={sales.pedidosYaMix}
               onChange={(e) => handleInputChange("pedidosYaMix", e.target.value)}
-              placeholder="0"
+              placeholder="0,00"
               onKeyDown={handleKeyDown}
             />
             <InputWithIcon
@@ -556,7 +556,7 @@ Saludos.`;
               icon={<Bike className="w-4 h-4" />}
               value={sales.uberEats}
               onChange={(e) => handleInputChange("uberEats", e.target.value)}
-              placeholder="0"
+              placeholder="0,00"
               onKeyDown={handleKeyDown}
             />
             <InputWithIcon
@@ -564,7 +564,7 @@ Saludos.`;
               icon={<School2 className="w-4 h-4" />}
               value={sales.junaeb}
               onChange={(e) => handleInputChange("junaeb", e.target.value)}
-              placeholder="0"
+              placeholder="0,00"
               onKeyDown={handleKeyDown}
             />
           </CardContent>
@@ -591,7 +591,7 @@ Saludos.`;
                       onKeyDown={handleKeyDown}
                       />
                       <span className="w-24 text-right font-mono text-sm text-muted-foreground">
-                          {formatCurrency(cashBreakdown[d.key] * d.value)}
+                          {formatCurrency((cashBreakdown[d.key] || 0) * d.value)}
                       </span>
                   </div>
               </div>
