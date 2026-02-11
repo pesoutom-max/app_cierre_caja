@@ -446,6 +446,7 @@ Saludos.`;
                     }}
                     initialFocus
                     locale={es}
+                    weekStartsOn={1}
                   />
                 </PopoverContent>
               </Popover>

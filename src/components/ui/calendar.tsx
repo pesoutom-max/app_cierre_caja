@@ -18,8 +18,6 @@ function Calendar({
 }: CalendarProps) {
   return (
     <DayPicker
-      locale={es}
-      weekStartsOn={1}
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
@@ -59,6 +57,8 @@ function Calendar({
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
       }}
       {...props}
+      locale={es}
+      weekStartsOn={1}
     />
   )
 }
