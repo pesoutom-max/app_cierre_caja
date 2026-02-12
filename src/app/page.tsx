@@ -9,11 +9,9 @@ export default function Home() {
   return (
     <div className="bg-background min-h-dvh w-full">
       <main className="container mx-auto px-2 sm:px-4 py-8 md:py-12">
-        <header className="relative text-center mb-8 md:mb-12">
-          <div className="absolute right-0 top-0">
-            <ThemeToggle />
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold font-headline text-primary">
+        <header className="relative text-center mb-8 md:mb-12 flex flex-col items-center">
+          <ThemeToggle />
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold font-headline text-primary mt-4">
             Cierre de Caja
           </h1>
           <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
