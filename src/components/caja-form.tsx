@@ -466,8 +466,10 @@ Saludos.`;
                     mode="single"
                     selected={date}
                     onSelect={(d) => {
-                      setDate(d || new Date());
-                      setIsCalendarOpen(false);
+                      if (d) {
+                        setDate(d);
+                        setIsCalendarOpen(false);
+                      }
                     }}
                     initialFocus
                   />
