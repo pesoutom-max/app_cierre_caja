@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "DailyClose": {
@@ -66,6 +67,20 @@
         "nextDayBalance": {
           "type": "number",
           "description": "The remaining cash balance for the next day, calculated as (totalCashInBox - cashWithdrawal)."
+        },
+        "cashBreakdown": {
+          "type": "object",
+          "description": "Detalle de billetes y monedas contados.",
+          "properties": {
+            "b20000": { "type": "number" },
+            "b10000": { "type": "number" },
+            "b5000": { "type": "number" },
+            "b2000": { "type": "number" },
+            "b1000": { "type": "number" },
+            "m500": { "type": "number" },
+            "m100": { "type": "number" },
+            "m50": { "type": "number" }
+          }
         }
       },
       "required": [

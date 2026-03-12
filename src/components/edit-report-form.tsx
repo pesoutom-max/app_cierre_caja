@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -32,6 +33,10 @@ import {
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { denominations } from './caja-form';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 
 interface EditReportFormProps {
     report: DailyClose;
@@ -77,8 +82,10 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
     const [date, setDate] = useState<Date | undefined>(new Date(report.date.seconds * 1000));
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const [sales, setSales] = useState<SalesData>(initialSalesData);
+    const [cashBreakdown, setCashBreakdown] = useState<{[key: string]: number}>(report.cashBreakdown || {});
     const [isSaving, setIsSaving] = useState(false);
     const [expectedCash, setExpectedCash] = useState(0);
+    const [totalCashInBox, setTotalCashInBox] = useState(0);
 
     const deliverySalesQuery = useMemoFirebase(
         () => (firestore ? collection(firestore, 'daily_closes', report.id, 'delivery_service_sales') : null),
@@ -95,6 +102,14 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
         const numberValue = parseInt(digits, 10);
         const formattedValue = new Intl.NumberFormat('es-CL').format(numberValue);
         setSales((prev) => ({ ...prev, [field]: formattedValue }));
+    };
+
+    const handleBreakdownChange = (key: string, value: string) => {
+      const numericValue = parseInt(value, 10);
+      setCashBreakdown(prev => ({
+        ...prev,
+        [key]: isNaN(numericValue) ? 0 : numericValue
+      }));
     };
 
     useEffect(() => {
@@ -120,15 +135,13 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
             deliverySales.forEach(sale => {
                 if (sale.serviceName === "Pedidos Ya Ice Scroll") newSales.pedidosYaIceScroll = String(sale.salesAmount);
                 if (sale.serviceName === "Pedidos Ya Wafix") newSales.pedidosYaWafix = String(sale.salesAmount);
-                if (sale.serviceName === "Pedidos Ya Mix" || sale.serviceName === "Pedidos Ya Mixie") newSales.pedidosYaMixie = String(sale.salesAmount);
+                if (sale.serviceName === "Pedidos Ya Mixie") newSales.pedidosYaMixie = String(sale.salesAmount);
                 if (sale.serviceName === "Pedidos Ya Churro Blis") newSales.pedidosYaChurroBlis = String(sale.salesAmount);
                 if (sale.serviceName === "Uber Eats") newSales.uberEats = String(sale.salesAmount);
                 if (sale.serviceName === "Junaeb") newSales.junaeb = String(sale.salesAmount);
             });
         }
 
-        // This is a bit of a hack to set the state and then format it
-        // A better way would be to have raw and formatted state separately
         Object.entries(newSales).forEach(([key, value]) => {
             handleInputChange(key as keyof SalesData, value);
         });
@@ -140,7 +153,12 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
         const { saldoAnterior, efectivo, gastosEfectivo } = sales;
         const cashBalance = getNum(saldoAnterior) + getNum(efectivo) - getNum(gastosEfectivo);
         setExpectedCash(cashBalance);
-    }, [sales]);
+
+        const breakdownTotal = denominations.reduce((acc, d) => {
+          return acc + (cashBreakdown[d.key] || 0) * d.value;
+        }, 0);
+        setTotalCashInBox(breakdownTotal);
+    }, [sales, cashBreakdown]);
 
     const handleUpdate = async () => {
         if (!firestore) return;
@@ -171,13 +189,12 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
                 cashExpenses: getNum(sales.gastosEfectivo),
                 totalDeliverySales,
                 expectedCashBalance: expectedCash,
+                totalCashInBox: totalCashInBox,
+                cashDifference: totalCashInBox - expectedCash,
                 cashWithdrawal: getNum(sales.cashWithdrawal),
-                nextDayBalance: (report.totalCashInBox || 0) - getNum(sales.cashWithdrawal),
+                nextDayBalance: totalCashInBox - getNum(sales.cashWithdrawal),
+                cashBreakdown: cashBreakdown,
             };
-
-            if (report.totalCashInBox !== undefined) {
-                updatedDailyClose.cashDifference = report.totalCashInBox - expectedCash;
-            }
 
             batch.update(reportRef, updatedDailyClose);
 
@@ -215,7 +232,7 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
 
     return (
         <form onSubmit={(e) => { e.preventDefault(); handleUpdate() }} className="space-y-8 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
                 <Card>
                     <CardHeader><CardTitle>Caja y Gastos</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
@@ -243,6 +260,34 @@ export function EditReportForm({ report, onFinished }: EditReportFormProps) {
                         <InputWithIcon label="Uber Eats" icon={<Bike className="w-4 h-4" />} value={sales.uberEats} onChange={(e) => handleInputChange("uberEats", e.target.value)} placeholder="0" inputMode="numeric" />
                         <InputWithIcon label="Junaeb" icon={<School2 className="w-4 h-4" />} value={sales.junaeb} onChange={(e) => handleInputChange("junaeb", e.target.value)} placeholder="0" inputMode="numeric" />
                     </CardContent>
+                </Card>
+                <Card className="lg:col-span-3">
+                  <CardHeader><CardTitle>Detalle de Efectivo en Caja</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {denominations.map((d) => (
+                        <div key={d.key} className="flex items-center justify-between gap-2 border-b pb-2">
+                          <Label htmlFor={`edit-${d.key}`} className="text-sm font-normal">{d.label}</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              id={`edit-${d.key}`}
+                              type="number"
+                              value={cashBreakdown[d.key] || ''}
+                              onChange={(e) => handleBreakdownChange(d.key, e.target.value)}
+                              className="w-16 h-8 text-right"
+                            />
+                            <span className="w-20 text-right font-mono text-xs text-muted-foreground">
+                              {formatCurrency((cashBreakdown[d.key] || 0) * d.value)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-6 flex justify-between items-center font-bold">
+                      <span>Total Contado</span>
+                      <span>{formatCurrency(totalCashInBox)}</span>
+                    </div>
+                  </CardContent>
                 </Card>
             </div>
             <div className="flex flex-col-reverse gap-4 sm:flex-row sm:justify-between sm:items-center">

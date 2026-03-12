@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -100,7 +101,7 @@ const initialCashBreakdown: CashBreakdown = {
   m50: 0,
 };
 
-const denominations = [
+export const denominations = [
   { label: "Billetes de $20.000", value: 20000, key: "b20000" as keyof CashBreakdown },
   { label: "Billetes de $10.000", value: 10000, key: "b10000" as keyof CashBreakdown },
   { label: "Billetes de $5.000", value: 5000, key: "b5000" as keyof CashBreakdown },
@@ -225,16 +226,15 @@ export default function CajaForm() {
     const cashBalance = getNum(saldoAnterior) + getNum(efectivo) - getNum(gastosEfectivo);
     setExpectedCash(cashBalance);
 
-    const timer = setTimeout(() => setIsCalculating(false), 300);
-    return () => clearTimeout(timer);
-  }, [sales]);
-
-  React.useEffect(() => {
-    const total = denominations.reduce((acc, d) => {
+    // Cash Breakdown Total
+    const breakdownTotal = denominations.reduce((acc, d) => {
       return acc + (cashBreakdown[d.key] || 0) * d.value;
     }, 0);
-    setTotalCashInBox(total);
-  }, [cashBreakdown]);
+    setTotalCashInBox(breakdownTotal);
+
+    const timer = setTimeout(() => setIsCalculating(false), 300);
+    return () => clearTimeout(timer);
+  }, [sales, cashBreakdown]);
 
   React.useEffect(() => {
     setDifference(totalCashInBox - expectedCash);
@@ -305,6 +305,8 @@ export default function CajaForm() {
       cashDifference: difference,
       cashWithdrawal: getNum(cashWithdrawal),
       nextDayBalance: nextDayBalance,
+      cashBreakdown: cashBreakdown,
+      notes: ""
     };
 
     const mainCollectionRef = collection(firestore, "daily_closes");
@@ -366,6 +368,7 @@ export default function CajaForm() {
       head: [['Resumen', 'Monto']],
       body: [
         ['Venta Total del Día', formatCurrency(reportData.totalSales)],
+        ['Gastos en Efectivo', formatCurrency(reportData.sales.gastosEfectivo)],
         ['Saldo Esperado en Caja', formatCurrency(reportData.expectedCash)],
         ['Efectivo Real en Caja', formatCurrency(reportData.totalCashInBox)],
         ['Diferencia', { content: formatCurrency(reportData.difference), styles: { textColor: reportData.difference < 0 ? [255, 0, 0] : [0, 0, 0] } }],
@@ -392,7 +395,6 @@ export default function CajaForm() {
         ['Uber Eats', formatCurrency(reportData.sales.uberEats)],
         ['Junaeb', formatCurrency(reportData.sales.junaeb)],
         ['Saldo Anterior en Caja', formatCurrency(reportData.sales.saldoAnterior)],
-        ['Gastos en Efectivo', formatCurrency(reportData.sales.gastosEfectivo)],
       ],
       theme: 'striped',
     });
@@ -427,10 +429,11 @@ export default function CajaForm() {
       reportData.sales.uberEats +
       reportData.sales.junaeb;
 
-    const message = `*Resumen de Caja - ${format(reportData.reportDate, "PPP", { locale: es })}*
+    let message = `*Resumen de Caja - ${format(reportData.reportDate, "PPP", { locale: es })}*
 
 *Resumen General:*
 - Venta Total: ${formatCurrency(reportData.totalSales)}
+- Gastos: ${formatCurrency(reportData.sales.gastosEfectivo)}
 - Saldo Esperado: ${formatCurrency(reportData.expectedCash)}
 - Efectivo Real: ${formatCurrency(reportData.totalCashInBox)}
 - *Diferencia: ${formatCurrency(reportData.difference)}*
@@ -443,6 +446,17 @@ export default function CajaForm() {
 - Transferencias: ${formatCurrency(reportData.sales.transferencias)}
 - Gift Cards: ${formatCurrency(reportData.sales.giftCards)}
 - Delivery: ${formatCurrency(totalDelivery)}
+
+*Detalle de Efectivo:*`;
+
+    denominations.forEach(d => {
+      const count = reportData.cashBreakdown[d.key] || 0;
+      if (count > 0) {
+        message += `\n- ${d.label}: ${count} (${formatCurrency(count * d.value)})`;
+      }
+    });
+
+    message += `\n\n*Total Contado: ${formatCurrency(reportData.totalCashInBox)}*
 
 Saludos.`;
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;

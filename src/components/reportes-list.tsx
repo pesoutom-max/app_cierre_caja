@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -9,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { AlertCircle, Pencil, Share, Trash } from 'lucide-react';
+import { AlertCircle, Download, Pencil, Share, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -29,6 +30,9 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from '@/hooks/use-toast';
 import { EditReportForm } from './edit-report-form';
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { denominations } from './caja-form';
 
 
 export interface DailyClose {
@@ -47,6 +51,9 @@ export interface DailyClose {
     cashDifference?: number;
     cashWithdrawal?: number;
     nextDayBalance?: number;
+    cashBreakdown?: {
+      [key: string]: number;
+    };
 }
 
 const formatDate = (timestamp: { seconds: number; nanoseconds: number; } | Date) => {
@@ -73,6 +80,68 @@ export default function ReportesList() {
 
   const { data: reports, isLoading, error } = useCollection<DailyClose>(dailyClosesQuery);
 
+  const generatePDF = (report: DailyClose) => {
+    const doc = new jsPDF();
+    const reportDate = report.date instanceof Date ? report.date : new Date(report.date.seconds * 1000);
+
+    doc.setFontSize(20);
+    doc.text("Reporte de Cierre de Caja", 105, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`Fecha: ${format(reportDate, "PPP", { locale: es })}`, 105, 28, { align: 'center' });
+
+    autoTable(doc, {
+      startY: 40,
+      head: [['Resumen', 'Monto']],
+      body: [
+        ['Venta Total del Día', formatCurrency(totalSales(report))],
+        ['Gastos en Efectivo', formatCurrency(report.cashExpenses)],
+        ['Saldo Esperado en Caja', formatCurrency(report.expectedCashBalance)],
+        ['Efectivo Real en Caja', formatCurrency(report.totalCashInBox || 0)],
+        ['Diferencia', { content: formatCurrency(report.cashDifference || 0), styles: { textColor: (report.cashDifference || 0) < 0 ? [255, 0, 0] : [0, 0, 0] } }],
+        ['Retiro de Efectivo', formatCurrency(report.cashWithdrawal || 0)],
+        ['Saldo Día Siguiente', formatCurrency(report.nextDayBalance || 0)],
+      ],
+      theme: 'grid',
+    });
+
+    const lastTableY = (doc as any).lastAutoTable.finalY;
+
+    autoTable(doc, {
+      startY: lastTableY + 10,
+      head: [['Concepto de Ingreso', 'Monto']],
+      body: [
+        ['Efectivo del Día', formatCurrency(report.totalCashSales)],
+        ['Monto en Tarjetas', formatCurrency(report.totalCardSales)],
+        ['Transferencias Recibidas', formatCurrency(report.totalTransferSales)],
+        ['Gift Cards Entregados', formatCurrency(report.totalGiftCardSales)],
+        ['Delivery (Total)', formatCurrency(report.totalDeliverySales)],
+        ['Saldo Anterior en Caja', formatCurrency(report.startingCashBalance)],
+      ],
+      theme: 'striped',
+    });
+
+    const secondTableY = (doc as any).lastAutoTable.finalY;
+
+    if (report.cashBreakdown) {
+      autoTable(doc, {
+        startY: secondTableY + 10,
+        head: [['Denominación', 'Cantidad', 'Total']],
+        body: denominations.map(d => [
+          d.label,
+          report.cashBreakdown![d.key] || '0',
+          formatCurrency((report.cashBreakdown![d.key] || 0) * d.value)
+        ]),
+        didDrawPage: (data) => {
+          data.settings.margin.top = 10;
+        },
+        theme: 'grid',
+      });
+    }
+
+
+    doc.save(`Reporte_Caja_${format(reportDate, "yyyy-MM-dd")}.pdf`);
+  };
+
   const handleShare = (report: DailyClose) => {
     const reportDate = report.date instanceof Date ? report.date : new Date(report.date.seconds * 1000);
     
@@ -80,6 +149,7 @@ export default function ReportesList() {
 
 *Resumen General:*
 - Venta Total: ${formatCurrency(totalSales(report))}
+- Gastos: ${formatCurrency(report.cashExpenses)}
 - Saldo Esperado: ${formatCurrency(report.expectedCashBalance)}`;
 
     if (report.totalCashInBox !== undefined && report.cashDifference !== undefined) {
@@ -101,9 +171,20 @@ export default function ReportesList() {
 - Tarjetas: ${formatCurrency(report.totalCardSales)}
 - Transferencias: ${formatCurrency(report.totalTransferSales)}
 - Gift Cards: ${formatCurrency(report.totalGiftCardSales)}
-- Delivery: ${formatCurrency(report.totalDeliverySales)}
+- Delivery: ${formatCurrency(report.totalDeliverySales)}`;
 
-Saludos.`;
+    if (report.cashBreakdown) {
+      message += `\n\n*Detalle de Efectivo:*`;
+      denominations.forEach(d => {
+        const count = report.cashBreakdown![d.key] || 0;
+        if (count > 0) {
+          message += `\n- ${d.label}: ${count} (${formatCurrency(count * d.value)})`;
+        }
+      });
+      message += `\n*Total Contado: ${formatCurrency(report.totalCashInBox || 0)}*`;
+    }
+
+    message += `\n\nSaludos.`;
 
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
@@ -225,6 +306,9 @@ Saludos.`;
                       <Button variant="ghost" size="icon" onClick={() => handleShare(report)}>
                           <Share className="h-4 w-4" />
                       </Button>
+                      <Button variant="ghost" size="icon" onClick={() => generatePDF(report)}>
+                          <Download className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => setReportToEdit(report)}>
                           <Pencil className="h-4 w-4" />
                       </Button>
@@ -260,18 +344,21 @@ Saludos.`;
               <p className="text-muted-foreground">Gastos</p>
               <p className="text-right font-medium text-destructive">{formatCurrency(report.cashExpenses)}</p>
             </CardContent>
-            <CardFooter className="flex justify-end gap-2">
+            <CardFooter className="flex flex-wrap justify-end gap-2">
                 <Button variant="outline" size="sm" onClick={() => handleShare(report)}>
                     <Share className="h-4 w-4 mr-2" />
-                    Compartir
+                    WP
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => generatePDF(report)}>
+                    <Download className="h-4 w-4 mr-2" />
+                    PDF
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setReportToEdit(report)}>
                     <Pencil className="h-4 w-4 mr-2" />
                     Editar
                 </Button>
                 <Button variant="destructive" size="sm" onClick={() => setReportToDelete(report)}>
-                    <Trash className="h-4 w-4 mr-2" />
-                    Eliminar
+                    <Trash className="h-4 w-4" />
                 </Button>
             </CardFooter>
           </Card>
@@ -280,11 +367,11 @@ Saludos.`;
 
 
       <Dialog open={!!reportToEdit} onOpenChange={(isOpen) => !isOpen && setReportToEdit(null)}>
-        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-4xl h-full sm:h-auto">
+        <DialogContent className="max-w-full sm:max-w-2xl lg:max-w-4xl h-full sm:h-auto overflow-y-auto">
             <DialogHeader>
                 <DialogTitle>Editar Reporte del {reportToEdit ? formatDate(new Date(reportToEdit.date.seconds * 1000)): ''}</DialogTitle>
             </DialogHeader>
-            <div className="overflow-y-auto">
+            <div className="py-2">
               {reportToEdit && <EditReportForm report={reportToEdit} onFinished={() => setReportToEdit(null)} />}
             </div>
         </DialogContent>
